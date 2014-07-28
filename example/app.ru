@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require_relative "../sansom.rb"
+require_relative "./resources/foods.rb"
 =begin
 require_relative "./resources/foods.rb"
 
@@ -18,4 +19,8 @@ s.get "/" do |r|
   [200, { "Content-Type" => "text/plain"}, ["sushi"]]
 end
 
-s.start
+s.get "/food" do Food.new
+
+#s.start
+
+run s
