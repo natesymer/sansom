@@ -67,7 +67,7 @@ class Sansom
       .reject { |match_data, item, path|
         match_data.nil?
       }
-      .first rescue []
+      .last rescue []
     
     return NOT_FOUND if pair.count != 3
       
@@ -78,6 +78,8 @@ class Sansom
     item = pair[1]
     path = pair[2]
     
+    puts item
+    
     case item
     when Proc
       item.call r
@@ -85,6 +87,8 @@ class Sansom
       # truncate the path
       _env = env.dup
       _env["PATH_INFO"] = r.path_info[path.length..-1]
+      puts _env["PATH_INFO"]
+      puts item.items
       item.call _env
     else
       raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."

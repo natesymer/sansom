@@ -19,8 +19,20 @@ s.get "/" do |r|
   [200, { "Content-Type" => "text/plain"}, ["sushi"]]
 end
 
-s.get "/food" do Food.new
+s.get "/food", Food.new
 
 #s.start
 
-run s
+#run s
+
+class Food < Sansom
+  get "/sushi" do |r|
+    [200, { "Content-Type" => "text/plain"}, ["sushi"]]
+  end
+
+  get "/vegan" do |r|
+    [200, { "Content-Type" => "text/plain"}, ["vegan"]]
+  end
+end
+
+run Food.new
