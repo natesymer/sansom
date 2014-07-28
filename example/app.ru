@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require "rack"
 require_relative "../sansom.rb"
 require_relative "./resources/foods.rb"
 =begin
@@ -13,18 +14,6 @@ App.start
 
 =end
 
-s = Sansom.new
-
-s.get "/" do |r|
-  [200, { "Content-Type" => "text/plain"}, ["sushi"]]
-end
-
-s.get "/food", Food.new
-
-#s.start
-
-#run s
-
 class Food < Sansom
   get "/sushi" do |r|
     [200, { "Content-Type" => "text/plain"}, ["sushi"]]
@@ -35,4 +24,12 @@ class Food < Sansom
   end
 end
 
-run Food.new
+s = Sansom.new
+
+s.get "/" do |r|
+  [200, { "Content-Type" => "text/plain"}, ["root"]]
+end
+
+s.get "/food", Food.new
+
+s.start

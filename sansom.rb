@@ -21,25 +21,23 @@ class Sansom
 
   NOT_FOUND = [404, {"Content-Type" => "text/plain"}, ["Not found."]].freeze
   
+  def new
+    s = super
+    if self.class.instance
+      s.items = self.class.instance.items.dup
+      s.regexes = self.class.instance.regexes.dup
+    end
+  end
+  
   # Accessors
   
   def items
     @items ||= {}
-    
-    if self.class.instance && self != self.class.instance
-      return @items + self.class.instance.items
-    end
-
     @items
   end
   
   def regexes
     @regexes ||= {}
-    
-    if self.class.instance && self != self.class.instance
-      return @regexes + self.class.instance.regexes
-    end
-
     @regexes
   end
   
@@ -95,12 +93,12 @@ class Sansom
     end
   end
   
-  def start
+  def start(port=3001)
     raise NoRoutesError if items.empty?
-    run self
+    Rack::Handler.pick(['puma', 'unicorn', 'thin', 'webrick']).run self, :port => port
   end
   
-  def self.start
+  def self.start(port=3001)
     instance.start if instance
     new.start unless instance
   end
