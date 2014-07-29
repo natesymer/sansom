@@ -1,7 +1,22 @@
 Sansom
-==
+===
 
 Flexible, versatile, light web framework named after Sansom street in Philly.
+
+Installation
+-
+
+Add this line to your application's Gemfile:
+
+    gem '.'
+
+And then execute:
+
+    $ bundle
+
+Or install it yourself as:
+
+    $ gem install .
 
 Usage
 -
@@ -145,3 +160,14 @@ Notes
 - `Sansom` is under **140** lines of code at the time of writing. This includes
 	* Everything above
 	* Custom routing
+
+Contributing
+-
+
+1. Fork it
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create a new Pull Request
+
+**Please make sure you don't add tons and tons of code. Part of `Sansom`'s beauty is is brevity.**
