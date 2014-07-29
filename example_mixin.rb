@@ -2,12 +2,12 @@
 
 require "./sansom"
 
-class Mixin
+class Mixin < Hash
   include Sansomable
   
   def template
     get "/sansomable" do |r|
-      [200, { "Content-Type" => "text/plain"}, ["Sansomable"]]
+      [200, { "Content-Type" => "text/plain"}, ["Sansomable Hash"]]
     end
   end
 end

@@ -1,14 +1,14 @@
 Sansom
 ==
 
-Flexible, light web framework named after Sansom street in Philly.
+Flexible, versatile, light web framework named after Sansom street in Philly.
 
 Usage
 -
 
 It's pretty simple. Instead of `Class`s storing routes, `Object`s store routes.
 
-There are two ways you can use `Sansom`:
+There are two ways you can deploy `Sansom`:
 
     # app.rb
     
@@ -23,7 +23,7 @@ There are two ways you can use `Sansom`:
     end
     s.start
 
-Or
+Or, the more production-ready version:
 
     # config.ru
     
@@ -107,6 +107,27 @@ Or maybe you want to mount your Rails/Sinatra/whatever app
     s.map "/", RailsApp.new
     s.start
     
+Lastly, any object can become a "`Sansom`" through a mixin:
+
+    # mixin.ru
+    
+    class Mixin < Hash
+      include Sansomable
+  
+      def template
+        get "/sansomable" do |r|
+          [200, { "Content-Type" => "text/plain"}, ["Sansomable Hash"]]
+        end
+      end
+    end
+    
+    run Mixin.new
+    
+If you look at how `Sansom` is defined, it makes sense:
+
+    Sansom = Class.new Object
+    Sansom.include Sansomable
+    
 Matching
 -
 
@@ -121,6 +142,6 @@ Notes
 -
 
 - `Sansom` does not pollute _any_ `Object` methods, including `initialize`
-- `Sansom` is under **130** lines of code at the time of writing. This includes
+- `Sansom` is under **140** lines of code at the time of writing. This includes
 	* Everything above
 	* Custom routing
