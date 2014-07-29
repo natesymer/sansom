@@ -2,91 +2,58 @@
 
 require "rack"
 
-# Sansom
-# The ultra-tiny web framework
-
 class Sansom
   InvalidRouteError = Class.new StandardError
   NoRoutesError = Class.new StandardError
   
-  HTTP_VERBS = [
-    "GET",
-    "HEAD",
-    "POST",
-    "PUT",
-    "DELETE",
-    "PATCH",
-    "OPTIONS"
-  ].freeze
-
+  HTTP_VERBS = ["GET","HEAD","POST","PUT","DELETE","PATCH","OPTIONS"].freeze
+  HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
   NOT_FOUND = [404, {"Content-Type" => "text/plain"}, ["Not found."]].freeze
   
-  def new
+  def self.new
     s = super
-    if self.class.instance
-      s.items = self.class.instance.items.dup
-      s.regexes = self.class.instance.regexes.dup
+    s.template if s.respond_to? :template
+    s
+  end
+  
+  def template
+    get "/" do |r|
+      [200, {"Content-Type" => "text/plain"}, "Welcome to Sansom!"]
     end
   end
   
-  # Accessors
-  
   def items
     @items ||= {}
-    @items
   end
-  
-  def regexes
-    @regexes ||= {}
-    @regexes
-  end
-  
-  def self.instance
-    @@instances ||= {}
-    @@instances[self.to_s]
-  end
-  
-  def self.instance=(instance)
-    @@instances ||= {}
-    @@instances[self.to_s] = instance
-  end
-  
-  # Rack
-  
+
   def call env
     r = Rack::Request.new env
 
     return NOT_FOUND if items.empty?
-    
+
     pair = items[r.request_method]
       .map { |path, item| 
-        [regexes[path].match(r.path_info), item, path] rescue [nil, nil, nil]
-      }
-      .reject { |match_data, item, path|
+        [regexify(path).match(r.path_info), item, path] rescue [nil, nil, nil]
+      }.reject { |match_data, item, path|
         match_data.nil?
       }
-      .last rescue []
+      .last || []
     
     return NOT_FOUND if pair.count != 3
-      
+    
     md = pair[0]
     captures = md.captures
     md.names.each_with_index { |name, i| r.params[name] = captures[i] }
     
     item = pair[1]
     path = pair[2]
-    
-    puts item
-    
+
     case item
     when Proc
       item.call r
     when Sansom
-      # truncate the path
       _env = env.dup
       _env["PATH_INFO"] = r.path_info[path.length..-1]
-      puts _env["PATH_INFO"]
-      puts item.items
       item.call _env
     else
       raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
@@ -95,18 +62,11 @@ class Sansom
   
   def start(port=3001)
     raise NoRoutesError if items.empty?
-    Rack::Handler.pick(['puma', 'unicorn', 'thin', 'webrick']).run self, :port => port
+    Rack::Handler.pick(HANDLERS).run self, :Port => port # :Port really is capitalized
   end
-  
-  def self.start(port=3001)
-    instance.start if instance
-    new.start unless instance
-  end
-  
-  # DSL
   
   def method_missing(meth, *args, &block)
-    if block
+    if block && args.count == 1
       super unless map_path meth, args[0], block
     elsif args.count == 2
       super unless map_path meth, args[0], args[1]
@@ -115,16 +75,11 @@ class Sansom
     end
   end
   
-  # Expose the routing API to the subclass
-  def self.method_missing(meth, *args, &block)
-    instance = new
-    instance.method_missing(meth, *args, &block) rescue super
-  end
-  
   private
   
   def regexify path
-    s = path.split("/")
+    s = "^/"
+    s << path.split("/")
           .reject(&:empty?)
           .map { |p|
             if p.start_with? ":"
@@ -135,6 +90,7 @@ class Sansom
           }
           .join("/")
     s << "/?"
+    s << "$"
     
     Regexp.new s
   end
@@ -147,13 +103,12 @@ class Sansom
     
     case item
     when Proc, Sansom
-      self.items[verb] ||= {}
-      self.items[verb][path] = item
+      items[verb] ||= {}
+      items[verb][path] = item
     else
       return false
     end
-    
-    regexes[path] = regexify path
+
     true
   end
 end
