@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
 
 require "rack"
-require "tree" # rubytree
+require "sansom/pine"
+#require "tree" # rubytree
 
 module Sansomable
   class TreeContent
@@ -39,9 +40,13 @@ module Sansomable
     @tree
   end
 
+  # /users/:id/purchase
+  # /
+
   def match http_method, path
     components = s_parse_path(path)
     matched_components = []
+    matched_parameters = {}
     
     walk = components.inject(tree) do |node, component| 
       child = node[component]
@@ -79,7 +84,7 @@ module Sansomable
     elsif Proc === item
       item.call r
     elsif sansom? item
-      item.call(env.dup.merge({ "PATH_INFO" => s_truncate_path(r.path_info, m.last) }))
+      item.call(env.dup.merge({ "PATH_INFO" => s_truncate_path(r.path_info, m[1]) }))
     else
       raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
     end
