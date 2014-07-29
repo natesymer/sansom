@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'sansom/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "Sansom"
+  spec.name          = "sansom"
   spec.version       = Sansom::VERSION
   spec.authors       = ["Nathaniel Symer"]
   spec.email         = ["nate@natesymer.com"]
