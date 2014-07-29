@@ -96,10 +96,31 @@ Let's say you've written a new version of your api. No problem.
     s.map "/v2", MyNewAPI.new
     s.start
     
+Or maybe you want to mount your Rails/Sinatra/whatever app
+
+    # app.rb
+    
+    require "sansom"
+    
+    s = Sansom.new
+    s.map "/api", SinatraApp.new
+    s.map "/", RailsApp.new
+    s.start
+    
+Matching
+-
+
+`Sansom` uses trees to match routes. It follows a certain set of rules:
+
+  - A matching order is enforced:
+  	1. The route matching the path and verb
+  	2. The first Subsansom that matches the route & verb
+  	3. The first mounted non-`Sansom` rack app matching the route
+
 Notes
 -
 
 - `Sansom` does not pollute _any_ `Object` methods, including `initialize`
-- `Sansom` is under **100** lines of code at the time of writing. This includes
+- `Sansom` is under **130** lines of code at the time of writing. This includes
 	* Everything above
 	* Custom routing

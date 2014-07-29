@@ -35,13 +35,7 @@ class Sansom
     s.template if s.respond_to? :template
     s
   end
-  
-  # Matching is done in order of ascending index.
-  # Precedence order:
-  # 1. A single Route (multiple routes is impossible)
-  # 2. First Subsansom
-  # 3. First Rack app
-  
+
   def match http_method, path
     matched_path = "/"
     components = parse_path(path)
@@ -61,7 +55,7 @@ class Sansom
     return nil if tc == "ROOT"
     
     match = tc[http_method] # Check for route
-    match ||= tc.items.select { |item| Sansom === item }.reject { |item| item.match(http_method,path[matched_path.length..-1]) }.first rescue nil # Check subsansoms
+    match ||= tc.items.select { |item| Sansom === item }.reject { |item| item.match(http_method,truncate_path(path, matched_path)).nil? }.first rescue nil # Check subsansoms
     match ||= tc.items.reject { |item| Sansom === item }.first rescue nil # Check for mounted rack apps
     [match, matched_path]
   end
@@ -71,7 +65,7 @@ class Sansom
     
     r = Rack::Request.new env
 
-    m = match(r.path_info, r.request_method)
+    m = match r.path_info, r.request_method
     item = m.first
     
     case item
@@ -82,8 +76,7 @@ class Sansom
       when Proc
         item.call r
       when Sansom
-        new_path = r.path_info[m.last.length..-1]
-        item.call(env.merge({ "PATH_INFO" => new_path }))
+        item.call(env.dup.merge({ "PATH_INFO" => truncate_path(path, m.last) }))
       else
         raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
       end
@@ -104,6 +97,10 @@ class Sansom
   
   def parse_path path
     path.split("/").reject(&:empty?).unshift("/")
+  end
+  
+  def truncate_path truncated, truncator
+    parse_path(truncated)[parse_path(truncator).count..-1].unshift("/").join("/")
   end
   
   def map_path mapping, path, item
