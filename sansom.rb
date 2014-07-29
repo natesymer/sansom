@@ -1,96 +1,93 @@
 #!/usr/bin/env ruby
 
 require "rack"
+require "tree" # rubytree
 
 class Sansom
+  class TreeContent
+    attr_accessor :items
+    def initialize
+      @items = []
+      @map = {}
+    end
+  
+    def []=(k,v)
+      @items << v if k == :map
+      @map[k] = v unless k == :map
+    end
+  
+    def [](k)
+      @items[k] if Numeric === k
+      @map[k] unless Numeric === k
+    end
+  end
+  
   InvalidRouteError = Class.new StandardError
   NoRoutesError = Class.new StandardError
   
   HTTP_VERBS = ["GET","HEAD","POST","PUT","DELETE","PATCH","OPTIONS"].freeze
   HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
   NOT_FOUND = [404, {"Content-Type" => "text/plain"}, ["Not found."]].freeze
-  CONFLICING_ROUTES = [500, {"Content-Type" => "text/plain"}, ["Conflicting routes were specified."]].freeze
-  SUBITEMS_KEY = "x_subitem".freeze
-  #PATH_KEY = "x_path".freeze
-  
+
   def self.new
     s = super
-    s.instance_variable_set "@map", {}
+    s.instance_variable_set "@tree", Tree::TreeNode.new "ROOT", "ROOT"
     s.template if s.respond_to? :template
     s
   end
   
-  # Recursive matching
-  # TODO: Use a TREE instead of this regex BS
-  
   # Matching is done in order of ascending index.
   # Precedence order:
-  # 1. A single Subsansom
-  # 2. A single Route (multiple routes is impossible)
-  # 3. A single Rack app
+  # 1. A single Route (multiple routes is impossible)
+  # 2. First Subsansom
+  # 3. First Rack app
   
-  def match path, verb
-    matches = @map
-                .map { |regex,meths| [regex.match(path), meths] }
-                .reject { |md, meths| md.nil? }
-                .map { |md, meths| [md, meths.select { |k,v| k == SUBITEMS_KEY || k == verb }] }
-                .reject { |md, meths| meths.empty? }
-                .map { |md, meths| [md.names.zip(md.captures) rescue nil, meths] }
-                
-    return 404 if matched.empty?
-                
-    # params are from regex matching the URL
-    routes = matches.reject { |params, meths| meths.member? SUBITEMS_KEY }.map { |params, meths| [params, meths[verb]] }
-    subitems = matches
-                .select { |params, meths| meths.member? SUBITEMS_KEY }
-                .map { |params, meths| [params, meths[SUBITEMS_KEY]].flatten }
-                
-    rack_apps = subitems.reject { |params, item, pth| Sansom === item }.map { |params, item, pth| item }
-                  
-    subsansoms = subitems
-                    .select { |params, item, pth| Sansom === item }
-                    .reject { |params, item, pth| Numeric === item.match(path[pth.length..-1], verb) }
-                    .map { |params, item, pth| [params, item] }
-
-    if subsansoms.count == 1
-      return Hash[[:params, :item].zip(subsansoms.first)]
-    elsif routes.count == 1
-      return Hash[[:params, :item].zip(routes.first)]
-    elsif rack_apps.count == 1
-      return { :item => rack_apps.first }
-    else
-      return 500
+  def match http_method, path
+    matched_path = "/"
+    components = parse_path(path)
+    
+    walk = components.each_with_index.inject(@tree) do |node, (component, idx)| 
+      child = node[component]
+      
+      unless child.nil?
+        matched_path = components[0..idx].unshift("").join("/")
+        return child
+      end
+      
+      node
     end
+    
+    tc = walk.content
+    return nil if tc == "ROOT"
+    
+    match = tc[http_method] # Check for route
+    match ||= tc.items.select { |item| Sansom === item }.reject { |item| item.match(http_method,path[matched_path.length..-1]) }.first rescue nil # Check subsansoms
+    match ||= tc.items.reject { |item| Sansom === item }.first rescue nil # Check for mounted rack apps
+    [match, matched_path]
   end
   
   def call env
-    return NOT_FOUND if @map.empty?
+    return NOT_FOUND if @tree.children.empty?
     
     r = Rack::Request.new env
+
+    m = match(r.path_info, r.request_method)
+    item = m.first
     
-    m = match r.path_info, r.request_method
-    
-    case m
-    when 500
-      CONFLICING_ROUTES
-    when 404
+    case item
+    when nil
       NOT_FOUND
-    when Hash
-      params = m[:params] || {}
-      item = m[:item]
-      
+    else
       case item
       when Proc
         item.call r
       when Sansom
-        # TODO: Needs work
-        item.call(env.merge({ "PATH_INFO" => r.path_info[meths[PATH_KEY].length..-1] }))
+        new_path = r.path_info[m.last.length..-1]
+        item.call(env.merge({ "PATH_INFO" => new_path }))
       else
         raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
       end
     end
-    
-    
   end
   
   def start port=3001
@@ -99,50 +96,37 @@ class Sansom
   end
   
   def method_missing(meth, *args, &block)
-    _args = args.push block
-    
-    if _args.count >= 2
-      super unless map_path meth, args[0], args[1]
-    else
-      super
-    end
+    _args = args.dup.push block
+    super unless _args.count >= 2 && map_path meth, _args[0], _args[1]
   end
   
   private
   
-  def regexify path, close=true
-    s = "^/"
-    s << path.split("/")
-          .reject(&:empty?)
-          .map { |p| p.start_with?(":") ? "(?<#{p[1..-1]}>.*)" : p }
-          .join("/")
-    s << "/?$" if close
-    
-    Regexp.new s
+  def parse_path path
+    path.split("/").reject(&:empty?).unshift("/")
   end
   
-  def map_path http_method, path, item
+  def map_path mapping, path, item
     return false if item == self
     
-    verb = http_method.to_s.strip.upcase
-    return false unless HTTP_VERBS.include? verb
+    verb = mapping.to_s.strip.upcase
+    return false unless HTTP_VERBS.include? verb || mapping == :map
+    verb = :map if mapping == :map
+    
+    components = parse_path path
+    components.each_with_index.inject(@tree) do |node,(component, idx)|
+      child = node[component]
 
-    case item
-    when Proc
-      regex = regexify path, true
-      @map[regex] ||= {}
-      @map[regex][verb] = item
-      true
-    when Sansom
-      _path = path.dup
-      _path = _path[0..-2] if _path.end_with? "/"
-      regex = regexify path, false
-      @map[regex] ||= {}
-      @map[regex][SUBITEMS_KEY] ||= []
-      @map[regex][SUBITEMS_KEY].push([item, _path])
-      true
-    else
-      false
+      if child.nil?
+        newvalue = Tree::TreeNode.new(component, TreeContent.new)
+        node << newvalue
+        child = newvalue
+      end
+
+      child.content[verb] = item if idx == components.count-1
+      child
     end
+    
+    @tree
   end
 end
