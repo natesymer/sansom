@@ -35,12 +35,14 @@ class NonAnimal < Sansom
 end
 
 class AnimalProducts < Sansom
-  get "/eggs" do |r|
-    food_response r
-  end
+  def template
+    get "/eggs" do |r|
+      food_response r
+    end
   
-  get "/milk" do |r|
-    food_response r
+    get "/milk" do |r|
+      food_response r
+    end
   end
 end
 
@@ -69,6 +71,10 @@ s.get "/" do |r|
   [200, { "Content-Type" => "text/plain"}, ["root"]]
 end
 
-s.get "/food", Food.new
+s.get "/something" do |r|
+  [200, { "Content-Type" => "text/plain"}, ["something"]]
+end
 
-s.start
+s.map "/food", Food.new
+
+s.start 2000

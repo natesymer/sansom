@@ -5,7 +5,7 @@ require "tree" # rubytree
 
 class Sansom
   class TreeContent
-    attr_accessor :items
+    attr_accessor :items, :map
     def initialize
       @items = []
       @map = {}
@@ -31,29 +31,32 @@ class Sansom
 
   def self.new
     s = super
-    s.instance_variable_set "@tree", Tree::TreeNode.new "ROOT", "ROOT"
+    s.instance_variable_set "@tree", Tree::TreeNode.new("ROOT", "ROOT")
     s.template if s.respond_to? :template
     s
   end
 
   def match http_method, path
-    matched_path = "/"
     components = parse_path(path)
+    matched_components = []
     
-    walk = components.each_with_index.inject(@tree) do |node, (component, idx)| 
+    walk = components.inject(@tree) do |node, component| 
       child = node[component]
       
-      unless child.nil?
-        matched_path = components[0..idx].unshift("").join("/")
-        return child
+      if child.nil?
+        node
+      else
+        matched_components << component unless component == "/"
+        child
       end
-      
-      node
     end
     
+    matched_path = "/" + matched_components.join("/")
+
     tc = walk.content
-    return nil if tc == "ROOT"
     
+    return nil if tc == "ROOT"
+
     match = tc[http_method] # Check for route
     match ||= tc.items.select { |item| Sansom === item }.reject { |item| item.match(http_method,truncate_path(path, matched_path)).nil? }.first rescue nil # Check subsansoms
     match ||= tc.items.reject { |item| Sansom === item }.first rescue nil # Check for mounted rack apps
@@ -65,18 +68,17 @@ class Sansom
     
     r = Rack::Request.new env
 
-    m = match r.path_info, r.request_method
+    m = match r.request_method, r.path_info
     item = m.first
     
-    case item
-    when nil
+    if item.nil?
       NOT_FOUND
     else
       case item
       when Proc
         item.call r
       when Sansom
-        item.call(env.dup.merge({ "PATH_INFO" => truncate_path(path, m.last) }))
+        item.call(env.dup.merge({ "PATH_INFO" => truncate_path(r.path_info, m.last) }))
       else
         raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
       end
@@ -84,13 +86,13 @@ class Sansom
   end
   
   def start port=3001
-    raise NoRoutesError if @map.empty?
+    raise NoRoutesError if @tree.children.empty?
     Rack::Handler.pick(HANDLERS).run self, :Port => port
   end
   
   def method_missing(meth, *args, &block)
     _args = args.dup.push block
-    super unless _args.count >= 2 && map_path meth, _args[0], _args[1]
+    super unless _args.count >= 2 && map_path(meth, _args[0], _args[1])
   end
   
   private
@@ -100,14 +102,14 @@ class Sansom
   end
   
   def truncate_path truncated, truncator
-    parse_path(truncated)[parse_path(truncator).count..-1].unshift("/").join("/")
+    "/" + parse_path(truncated)[parse_path(truncator).count..-1].join("/")
   end
   
   def map_path mapping, path, item
     return false if item == self
     
     verb = mapping.to_s.strip.upcase
-    return false unless HTTP_VERBS.include? verb || mapping == :map
+    return false unless HTTP_VERBS.include?(verb) || mapping == :map
     verb = :map if mapping == :map
     
     components = parse_path path
@@ -124,6 +126,6 @@ class Sansom
       child
     end
     
-    @tree
+    true
   end
 end
