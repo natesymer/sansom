@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
-require "rack"
-require_relative "../sansom.rb"
 require "json"
+require "./sansom.rb"
 
 class Sansom
   def food_response r
