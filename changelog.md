@@ -11,7 +11,8 @@ Changelog
 
 0.0.3
 
-* Added `before` block
+- Wrote custom tree implementation called Pine to replace RubyTree
+- Added `before` block
 
 Here's an example
 
