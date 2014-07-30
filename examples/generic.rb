@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
 
 require "json"
-require "sansom"
+#require "sansom"
+require_relative "../lib/sansom"
 
 class Sansom
   def food_response r
