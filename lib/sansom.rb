@@ -18,6 +18,10 @@ module Sansomable
     end
     @tree
   end
+  
+  def before_block
+    @before_block ||= nil
+  end
 
   def match verb, path
     components = s_parse_path(path)
@@ -54,19 +58,30 @@ module Sansomable
     
     if item.nil?
       NOT_FOUND
-    elsif item.is_a? Proc
-      item.call r
-    elsif sansom? item
-      r.path_info.sub! m[1], ""
-      item.call(r.env)
     else
-      raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
+      if before_block
+        res = before_block.call r
+        return res if res[0].is_a?(Numeric) && res[1].is_a?(Hash) && res[2].respond_to?(:each) rescue false
+      end
+      
+      if item.is_a? Proc
+        item.call r
+      elsif sansom? item
+        r.path_info.sub! m[1], ""
+        item.call(r.env)
+      else
+        raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
+      end
     end
   end
   
   def start port=3001
     raise NoRoutesError if tree.children.empty?
     Rack::Handler.pick(HANDLERS).run self, :Port => port
+  end
+  
+  def before(&block)
+    @before_block = block
   end
   
   def method_missing(meth, *args, &block)

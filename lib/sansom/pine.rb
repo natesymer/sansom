@@ -79,7 +79,7 @@ module Pine
       @trimmed
     end
     
-    def inspect(level = 0)
+    def inspect(level=0)
       if root?
         print "*"
       else
