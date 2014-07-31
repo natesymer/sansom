@@ -28,3 +28,12 @@ Here's an example
     end
     
     s.start 2000
+
+0.0.4
+
+- Fixed bug with with requiring pine
+
+0.0.5
+
+- Parameterized URLs!!! (Stuff like `/user/:id/profile`)
+	* Parameterized URLs work with mounted Rack/Sansom apps

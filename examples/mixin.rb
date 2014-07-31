@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require "sansom"
+require_relative "../lib/sansom" rescue require "sansom"
 
 class Mixin < Hash
   include Sansomable

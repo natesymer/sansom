@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require_relative "../lib/sansom"
+require_relative "../lib/sansom" rescue require "sansom"
 
 s = Sansom.new
 

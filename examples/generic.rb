@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 
 require "json"
-#require "sansom"
-require_relative "../lib/sansom"
+require_relative "../lib/sansom.rb" rescue LoadError require "sansom"
 
 class Sansom
   def food_response r
@@ -73,6 +72,10 @@ end
 
 s.get "/something" do |r|
   [200, { "Content-Type" => "text/plain"}, ["something"]]
+end
+
+s.get "/something/this" do |r|
+  [200, { "Content-Type" => "text/plain"}, ["something this"]]
 end
 
 s.map "/food", Food.new

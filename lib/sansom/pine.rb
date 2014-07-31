@@ -1,70 +1,19 @@
 #!/usr/bin/env ruby
 
+#require "sansom"
+
 # Path routing tree
-
-# Custom tree implementation for path routing
-
-# Custom features:
-# 1. Trimming: Limit a node to a single element
 
 module Pine
   class Node
     attr_reader :name
-    attr_accessor :content
-    attr_accessor :parent
+    attr_accessor :content,:parent
   
     def initialize name, content=Content.new
       @name = name
       @content = content
       @children = {}
       @parent = nil
-      @trimmed = false
-    end
-  
-    # returns a node for chaining
-    def <<(node)
-      if trimmed?
-        # Add to first child
-        children.first << node
-      else
-        node.parent = self
-        @children[node.name] = node
-        node
-      end
-    end
-    
-    def create_if_necessary name
-      unless @children.keys.include? name
-        child = self.class.new name
-        child.parent = self
-        @children[name] = child
-      end
-      @children[name]
-    end
-  
-    def root
-      n = self
-      n = n.parent while !n.root?
-      n
-    end
-    
-    def children
-      @children.values
-    end
-    
-    def trim(node)
-      @trimmed = true
-      @children.clear
-      @children[node.name] = node
-      self
-    end
-    
-    def []=(k,v)
-      self << Node.new(k, v)
-    end
-  
-    def [](k)
-      @children[k]
     end
   
     def root?
@@ -75,42 +24,108 @@ module Pine
       @children.count == 0
     end
     
-    def trimmed?
-      @trimmed
+    def wildcard?
+      @wildcard
     end
     
-    def inspect(level=0)
-      if root?
-        print "*"
+    def [] k
+      @children[k]
+    end
+    
+    def create comp
+      child = self.class.new comp
+      child.parent = self
+      child
+    end
+    
+    # Chainable
+    def << comp      
+      if comp.start_with? ":"
+        @wildcard = true
+        @children.clear
+        child = create(comp)
+        @children[comp] = child
+        child
       else
-        print "|" unless parent.parent.children.last == parent rescue false
-        print(' ' * level * 4)
-        print(parent.children.last == self ? "+" : "|")
-        print "---"
-        print(leaf? ? ">" : "+")
+        child = @children[comp]
+
+        if !child || (!child && child.leaf? && !child.wildcard?)
+          child = create(comp)
+          @children[comp] = child
+        end
+        
+        child
+      end
+    end
+
+    def parse_path path
+      path.split("/").reject(&:empty?).unshift("/")
+    end
+    
+    def map_path path, item, key
+      parse_path(path).inject(self) { |node, comp| node << comp }.content[key] = item
+      path
+    end
+    
+    def match path, verb
+      matched_comps = []
+      matched_params = {}
+    
+      walk = parse_path(path).inject self do |node, comp|
+        break node if node.leaf?
+        matched_comps << comp unless comp == "/"
+        child = node[comp]
+        matched_params[child.name[1..-1]] = comp if child.wildcard?
+        child
       end
 
-      puts " #{name} #{content.map rescue "fuck"}" 
+      return nil if walk.root? rescue true
 
-      children.each { |child| child.inspect(level + 1) if child } # Child might be 'nil'
+      c = walk.content
+      subpath = path.sub "/#{matched_comps.join("/")}", ""
+      
+      match = c.map[verb.downcase.to_sym]
+      match ||= c.items.select(&method(:sansom?)).reject { |s| s.tree.match(subpath, verb).nil? }.first
+      match ||= c.items.reject(&method(:sansom?)).first
+
+      return nil if match.nil?
+      
+      Result.new match, subpath, matched_params
+    end
+    
+    def sansom? obj
+      obj.singleton_class.include? Sansomable
+    end
+  end
+  
+  class Result
+    attr_reader :item, :remaining_path, :url_params
+
+    def initialize item, remaining_path, url_params
+      @item = item
+      @remaining_path = remaining_path
+      @url_params = url_params
+    end
+    
+    def sansom?
+      @item.singleton_class.include? Sansomable
     end
   end
   
   class Content
-    attr_accessor :items
-    attr_accessor :map
+    attr_accessor :items, :map
     
     def initialize
       @items = []
       @map = {}
     end
 
-    def []=(k,v)
+    def []= k,v
       @items << v if k == :map
       @map[k] = v unless k == :map
     end
   
-    def [](k)
+    def [] k
       @items[k] if Numeric === k
       @map[k] unless Numeric === k
     end
