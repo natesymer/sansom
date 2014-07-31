@@ -1,13 +1,11 @@
 #!/usr/bin/env ruby
 
-#require "sansom"
-
 # Path routing tree
 
 module Pine
   class Node
-    attr_reader :name
-    attr_accessor :content,:parent
+    attr_reader :name, :parent
+    attr_accessor :content
   
     def initialize name, content=Content.new
       @name = name
@@ -34,11 +32,10 @@ module Pine
     
     def create comp
       child = self.class.new comp
-      child.parent = self
+      child.instance_variable_set "@parent", self
       child
     end
     
-    # Chainable
     def << comp      
       if comp.start_with? ":"
         @wildcard = true
@@ -70,7 +67,7 @@ module Pine
     def match path, verb
       matched_comps = []
       matched_params = {}
-    
+      
       walk = parse_path(path).inject self do |node, comp|
         break node if node.leaf?
         matched_comps << comp unless comp == "/"
@@ -85,8 +82,8 @@ module Pine
       subpath = path.sub "/#{matched_comps.join("/")}", ""
       
       match = c.map[verb.downcase.to_sym]
-      match ||= c.items.select(&method(:sansom?)).reject { |s| s.tree.match(subpath, verb).nil? }.first
-      match ||= c.items.reject(&method(:sansom?)).first
+      match ||= c.items.detect { |i| sansom?(i) && !i.tree.match(subpath, verb).nil? }
+      match ||= c.items.detect { |i| !sansom?(i) }
 
       return nil if match.nil?
       
@@ -98,20 +95,8 @@ module Pine
     end
   end
   
-  class Result
-    attr_reader :item, :remaining_path, :url_params
+  Result = Struct.new :item, :remaining_path, :url_params
 
-    def initialize item, remaining_path, url_params
-      @item = item
-      @remaining_path = remaining_path
-      @url_params = url_params
-    end
-    
-    def sansom?
-      @item.singleton_class.include? Sansomable
-    end
-  end
-  
   class Content
     attr_accessor :items, :map
     

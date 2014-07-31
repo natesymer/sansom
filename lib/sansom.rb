@@ -24,7 +24,7 @@ module Sansomable
     
     if @before_block
       res = @before_block.call r
-      return res if res[0].is_a?(Numeric) && res[1].is_a?(Hash) && res[2].respond_to?(:each) rescue false
+      return res if [Fixnum, Hash, Array]-res.map(&:class) == 0
     end
 
     m = tree.match r.path_info, r.request_method
@@ -33,11 +33,13 @@ module Sansomable
       NOT_FOUND
     elsif m.item.is_a? Proc
       m.item.call r
-    elsif m.sansom?
-      r.path_info = m.remaining_path
-      m.item.call r.env
+    elsif m.item.respond_to? :call
+      _env = env.dup
+      _env["PATH_INFO"] = m.remaining_path
+      _env["QUERY_STRING"] += "&" + m.url_params.join("&")
+      m.item.call _env
     else
-      raise InvalidRouteError, "Invalid route handler, it must be a block (proc/lambda) or a subclass of Sansom."
+      raise InvalidRouteError, "Route handlers must be blocks or valid rack apps."
     end
   end
   
