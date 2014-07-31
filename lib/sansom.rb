@@ -8,7 +8,7 @@ module Sansomable
   HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options].freeze
   HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
   NOT_FOUND = [404, {}, ["Not found."]].freeze
-
+  
   def tree
     if @tree.nil?
       @tree = Pine::Node.new "ROOT"
@@ -16,11 +16,11 @@ module Sansomable
     end
     @tree
   end
-
+  
   def call env
     return NOT_FOUND if tree.leaf?
     
-    r = Rack::Request.new env
+    r = Rack::Request.new env.dup
     
     if @before_block
       res = @before_block.call r
@@ -29,15 +29,22 @@ module Sansomable
 
     m = tree.match r.path_info, r.request_method
     
+    if m.url_params.count > 0
+      q = r.params.merge(m.url_params)
+      s = q.map { |p| p.join '=' }.join("&")
+      r.env["rack.request.query_hash"] = q
+      r.env["rack.request.query_string"] = s
+      r.env["QUERY_STRING"] = s
+      r.instance_variable_set "@params", r.POST.merge(q)
+    end
+
     if !m
       NOT_FOUND
     elsif m.item.is_a? Proc
       m.item.call r
     elsif m.item.respond_to? :call
-      _env = env.dup
-      _env["PATH_INFO"] = m.remaining_path
-      _env["QUERY_STRING"] += "&" + m.url_params.join("&")
-      m.item.call _env
+      r.env["PATH_INFO"] = m.remaining_path
+      m.item.call r.env
     else
       raise InvalidRouteError, "Route handlers must be blocks or valid rack apps."
     end

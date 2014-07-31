@@ -27,12 +27,17 @@ module Pine
     end
     
     def [] k
-      @children[k]
+      return @children[k] || @children.values.first
+    #  child = @children[k] || @child.values.first
+     # return child unless child.nil?
+      
+     # @children[k] || @children.values.first.wildcard? ? @children.values.first : nil
     end
     
-    def create comp
+    def create_and_save comp
       child = self.class.new comp
       child.instance_variable_set "@parent", self
+      @children[comp] = child
       child
     end
     
@@ -40,23 +45,19 @@ module Pine
       if comp.start_with? ":"
         @wildcard = true
         @children.clear
-        child = create(comp)
-        @children[comp] = child
-        child
+        create_and_save comp
       else
         child = @children[comp]
-
-        if !child || (!child && child.leaf? && !child.wildcard?)
-          child = create(comp)
-          @children[comp] = child
-        end
-        
+        child = create_and_save comp if !child || (!child && child.leaf? && !child.wildcard?)
         child
       end
     end
 
     def parse_path path
-      path.split("/").reject(&:empty?).unshift("/")
+      c = path.split "/"
+      c[0] = '/'
+      c.delete_at(-1) if c[-1].empty?
+      c
     end
     
     def map_path path, item, key
@@ -72,7 +73,7 @@ module Pine
         break node if node.leaf?
         matched_comps << comp unless comp == "/"
         child = node[comp]
-        matched_params[child.name[1..-1]] = comp if child.wildcard?
+        matched_params[child.name[1..-1]] = comp if node.wildcard?
         child
       end
 
@@ -82,7 +83,7 @@ module Pine
       subpath = path.sub "/#{matched_comps.join("/")}", ""
       
       match = c.map[verb.downcase.to_sym]
-      match ||= c.items.detect { |i| sansom?(i) && !i.tree.match(subpath, verb).nil? }
+      match ||= c.items.detect { |i| sansom?(i) && i.tree.match(subpath, verb) }
       match ||= c.items.detect { |i| !sansom?(i) }
 
       return nil if match.nil?

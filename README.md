@@ -1,22 +1,23 @@
 Sansom
 ===
 
-Flexible, versatile, light web framework named after Sansom street in Philly.
+Scientific, philosophical, abstract web 'picowork' named after Sansom street in Philly, where it was made.
+
+Philosophy
+-
+
+*A piece of software should not limit you to one way of thinking.*
+
+You can write a `Sansomable` for each logical unit of your API, but you also don't have to.
+
+You can also mount existing Rails/Sinatra apps in your `Sansomable`. But you also don't have to.
+
+You can write one `Sansomable` for your entire API.
 
 Installation
 -
 
-Add this line to your application's Gemfile:
-
-    gem '.'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install .
+`gem install sansom`
 
 Usage
 -
@@ -148,18 +149,20 @@ Matching
 
 `Sansom` uses trees to match routes. It follows a certain set of rules:
 
+  - Wildcard routes can't have any siblings
   - A matching order is enforced:
   	1. The route matching the path and verb
   	2. The first Subsansom that matches the route & verb
   	3. The first mounted non-`Sansom` rack app matching the route
+  
 
 Notes
 -
 
 - `Sansom` does not pollute _any_ `Object` methods, including `initialize`
-- `Sansom` is under **140** lines of code at the time of writing. This includes
-	* Everything above
-	* Custom routing
+- `Sansom` is under **190** lines of code at the time of writing. This includes
+	* Rack conformity & the DSL (`sansom.rb`)
+	* Custom tree-based routing (`pine.rb`)
 
 Contributing
 -

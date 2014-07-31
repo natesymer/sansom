@@ -7,8 +7,8 @@ Gem::Specification.new do |s|
   s.version       = "0.0.5"
   s.authors       = ["Nathaniel Symer"]
   s.email         = ["nate@natesymer.com"]
-  s.summary       = "Flexible, versatile, light web framework named after Sansom street in Philly."
-  s.description   = s.summary + "It's under 140 lines of code & and it's lightning fast. It uses tree-based route resolution."
+  s.summary       = "Scientific, philosophical, abstract web 'picowork' named after Sansom street in Philly, where it was made."
+  s.description   = s.summary + " " + "It's under 140 lines of code & and it's lightning fast. It uses tree-based route resolution."
   s.homepage      = "http://github.com/fhsjaagshs/sansom"
   s.license       = "MIT"
 
