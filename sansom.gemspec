@@ -12,9 +12,10 @@ Gem::Specification.new do |s|
   s.homepage      = "http://github.com/fhsjaagshs/sansom"
   s.license       = "MIT"
 
-  s.files         = `git ls-files -z`.split("\x0")
-  s.executables   = s.files.grep(%r{^bin/}) { |f| File.basename(f) }
-  s.test_files    = s.files.grep(%r{^(test|spec|features)/})
+  allfiles = `git ls-files -z`.split("\x0")
+  s.files         = allfiles.grep(%r{(^[^\/]*$|^lib\/)}) # Match all lib files AND files in the root
+  s.executables   = allfiles.grep(%r{^bin/}) { |f| File.basename(f) }
+  s.test_files    = allfiles.grep(%r{^(test|spec|features)/})
   s.require_paths = ["lib"]
 
   s.add_development_dependency "bundler", "~> 1.6"
