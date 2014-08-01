@@ -172,7 +172,7 @@ Well, that's great and all, but how fast is "hello world" example in comparision
 Rack: **15ms**<br />
 Sansom: **15ms**<br />
 Sinatra: **28ms**<br />
-Rails: ****
+Rails: **34ms**
 
 (results are rounded down)
 
