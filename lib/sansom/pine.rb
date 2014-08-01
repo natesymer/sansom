@@ -3,6 +3,27 @@
 # Path routing tree
 
 module Pine
+  Result = Struct.new :item, :remaining_path, :url_params
+  
+  class Content
+    attr_accessor :items, :map
+    
+    def initialize
+      @items = []
+      @map = {}
+    end
+
+    def []= k,v
+      @items << v if k == :map
+      @map[k] = v unless k == :map
+    end
+  
+    def [] k
+      @items[k] if Numeric === k
+      @map[k] unless Numeric === k
+    end
+  end
+  
   class Node
     attr_reader :name, :parent
     attr_accessor :content
@@ -23,15 +44,16 @@ module Pine
     end
     
     def wildcard?
-      @wildcard
+      @name.start_with? ":"
     end
     
     def [] k
-      return @children[k] || @children.values.first
-    #  child = @children[k] || @child.values.first
-     # return child unless child.nil?
-      
-     # @children[k] || @children.values.first.wildcard? ? @children.values.first : nil
+      child = @children[k]
+      return child unless child.nil?
+      child = @children.values.first
+      return child if child.wildcard?
+      nil
+     # return @children[k] || @children.values.first
     end
     
     def create_and_save comp
@@ -41,9 +63,8 @@ module Pine
       child
     end
     
-    def << comp      
+    def << comp
       if comp.start_with? ":"
-        @wildcard = true
         @children.clear
         create_and_save comp
       else
@@ -53,9 +74,13 @@ module Pine
       end
     end
 
-    def parse_path path
+    def parse_path path, include_root=true
       c = path.split "/"
-      c[0] = '/'
+      if include_root
+        c[0] = '/'
+      else
+        c.delete_at(0) if c[0].empty?
+      end
       c.delete_at(-1) if c[-1].empty?
       c
     end
@@ -70,14 +95,15 @@ module Pine
       matched_params = {}
       
       walk = parse_path(path).inject self do |node, comp|
-        break node if node.leaf?
-        matched_comps << comp unless comp == "/"
+        next node[comp] if node.name == "ROOT"
+        matched_comps << comp unless node.leaf?
         child = node[comp]
-        matched_params[child.name[1..-1]] = comp if node.wildcard?
+        matched_params[child.name[1..-1]] = comp if child.wildcard?
         child
       end
 
-      return nil if walk.root? rescue true
+      return nil if walk.nil?
+      return nil if walk.root? #rescue true
 
       c = walk.content
       subpath = path.sub "/#{matched_comps.join("/")}", ""
@@ -93,27 +119,6 @@ module Pine
     
     def sansom? obj
       obj.singleton_class.include? Sansomable
-    end
-  end
-  
-  Result = Struct.new :item, :remaining_path, :url_params
-
-  class Content
-    attr_accessor :items, :map
-    
-    def initialize
-      @items = []
-      @map = {}
-    end
-
-    def []= k,v
-      @items << v if k == :map
-      @map[k] = v unless k == :map
-    end
-  
-    def [] k
-      @items[k] if Numeric === k
-      @map[k] unless Numeric === k
     end
   end
 end

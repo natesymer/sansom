@@ -21,7 +21,7 @@ module Sansomable
   def call env
     return NOT_FOUND if tree.leaf?
     
-    r = Rack::Request.new env.dup
+    r = Rack::Request.new env
     
     if @before_block
       res = @before_block.call r
@@ -29,25 +29,27 @@ module Sansomable
     end
 
     m = tree.match r.path_info, r.request_method
-    
-    if m.url_params.count > 0
-      q = r.params.merge(m.url_params)
-      s = q.map { |p| p.join '=' }.join("&")
-      r.env["rack.request.query_hash"] = q
-      r.env["rack.request.query_string"] = s
-      r.env["QUERY_STRING"] = s
-      r.instance_variable_set "@params", r.POST.merge(q)
-    end
 
-    if !m
+    if m.nil?
       NOT_FOUND
-    elsif m.item.is_a? Proc
-      m.item.call r
-    elsif m.item.respond_to? :call
-      r.env["PATH_INFO"] = m.remaining_path
-      m.item.call r.env
-    else
-      raise InvalidRouteError, "Route handlers must be blocks or valid rack apps."
+    else 
+      if m.url_params.count > 0
+        q = r.params.merge(m.url_params)
+        s = q.map { |p| p.join '=' }.join("&")
+        r.env["rack.request.query_hash"] = q
+        r.env["rack.request.query_string"] = s
+        r.env["QUERY_STRING"] = s
+        r.instance_variable_set "@params", r.POST.merge(q)
+      end
+      
+      if m.item.is_a? Proc
+        m.item.call r
+      elsif m.item.respond_to? :call
+        r.env["PATH_INFO"] = m.remaining_path
+        m.item.call r.env
+      else
+        raise InvalidRouteError, "Route handlers must be blocks or valid rack apps."
+      end
     end
   end
   

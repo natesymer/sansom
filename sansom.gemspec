@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |s|
   s.name          = "sansom"
-  s.version       = "0.0.6"
+  s.version       = "0.0.7"
   s.authors       = ["Nathaniel Symer"]
   s.email         = ["nate@natesymer.com"]
   s.summary       = "Scientific, philosophical, abstract web 'picowork' named after Sansom street in Philly, near where it was made."

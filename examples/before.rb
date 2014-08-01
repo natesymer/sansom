@@ -6,7 +6,9 @@ s = Sansom.new
 
 s.before do |r|
   puts "(#{s.class.to_s}) #{r.request_method.upcase} #{r.path_info}"
-  [200, {}, ["Hijacked by before!"]] if Random.new.rand(2) == 1
+  if Random.new.rand(2) == 1
+    [200, {}, ["Hijacked by before!"]]
+  end
 end
 
 s.get "/" do |r|

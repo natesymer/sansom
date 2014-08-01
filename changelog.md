@@ -38,3 +38,11 @@ Here's an example
 - Parameterized URLs!!! (Stuff like `/user/:id/profile`)
 	* Parameterized URLs work with mounted Rack/Sansom apps
 - Improved matching efficiency
+
+0.0.6
+
+- Before block response checking
+
+0.0.7
+
+- Fixed a lot of bugs
