@@ -45,4 +45,5 @@ Here's an example
 
 0.0.7
 
-- Fixed a lot of bugs
+- Fixed bug where a wilcard path component would be ignored if it came last in the URL
+- Fixed a bug where async responses would be marked as bad by the fastlinter.
