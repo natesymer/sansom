@@ -2,6 +2,7 @@
 
 require "rack"
 require_relative "./sansom/pine"
+require_relative "./rack/fastlint.rb"
 
 module Sansomable
   InvalidRouteError = Class.new StandardError
@@ -24,7 +25,7 @@ module Sansomable
     
     if @before_block
       res = @before_block.call r
-      return res if [Fixnum, Hash, Array]-res.map(&:class) == 0
+      return res if Rack::Fastlint.response res
     end
 
     m = tree.match r.path_info, r.request_method

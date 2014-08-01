@@ -164,6 +164,20 @@ Notes
 	* Rack conformity & the DSL (`sansom.rb`)
 	* Custom tree-based routing (`pine.rb`)
 
+Speed
+-
+
+Well, that's great and all, but how fast is "hello world" example in comparision to Rack or Sinatra?
+
+Rack: **15ms**<br />
+Sansom: **15ms**<br />
+Sinatra: **28ms**<br />
+Rails: ****
+
+(results are rounded down)
+
+Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
+
 Contributing
 -
 
