@@ -47,3 +47,9 @@ Here's an example
 
 - Fixed bug where a wilcard path component would be ignored if it came last in the URL
 - Fixed a bug where async responses would be marked as bad by the fastlinter.
+
+0.1.0
+
+- PUBLIC RELEASE!
+- After block added
+- Improved routing behavior & speed
