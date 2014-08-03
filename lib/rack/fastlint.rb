@@ -4,7 +4,6 @@ require "rack"
 
 module Rack
   class Fastlint
-    LintError = Class.new StandardError
     def self.response res
       return false unless res.kind_of?(Array) && res.count == 3
       
@@ -29,7 +28,7 @@ module Rack
           throw StandardError unless k =~ /\A[a-zA-Z][a-zA-Z0-9_-]*\z/
         }
       
-        body.each { |part| throw LintError unless part.kind_of? String }
+        body.each { |part| throw StandardError unless part.kind_of? String }
       rescue StandardError
         return false
       end
