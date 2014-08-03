@@ -21,8 +21,7 @@ s.get "/" do |r|
 end
 
 s.get "/:id/something" do |r|
-  puts r.params.inspect
-  [200, { "Content-Type" => "text/plain" }, ["something"]]
+  [200, { "Content-Type" => "text/plain" }, [r.params.to_json]]
 end
 
 s.map "/:id/", u

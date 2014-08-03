@@ -6,33 +6,26 @@ module Pine
   Result = Struct.new :item, :remaining_path, :url_params
   
   class Content
-    attr_accessor :items, :map
+    attr_reader :items, :map
     
     def initialize
       @items = []
       @map = {}
     end
-
-    def []= k,v
+    
+    def set k,v
       @items << v if k == :map
       @map[k] = v unless k == :map
-    end
-  
-    def [] k
-      @items[k] if Numeric === k
-      @map[k] unless Numeric === k
     end
   end
   
   class Node
-    attr_reader :name, :parent
-    attr_accessor :content
-  
-    def initialize name, content=Content.new
+    attr_reader :name, :parent, :content
+
+    def initialize name
       @name = name
-      @content = content
+      @content = Content.new
       @children = {}
-      @parent = nil
     end
   
     def root?
@@ -48,45 +41,37 @@ module Pine
     end
     
     def [] k
-      child = @children[k]
-      return child unless child.nil?
-      child = @children.values.first
-      return child if child.wildcard?
-      nil
-     # return @children[k] || @children.values.first
-    end
-    
-    def create_and_save comp
-      child = self.class.new comp
-      child.instance_variable_set "@parent", self
-      @children[comp] = child
-      child
+      if @children.member? k
+        @children[k]
+      else
+        c = @children.values.first
+        return c if c.wildcard? rescue false
+        nil
+      end
     end
     
     def << comp
-      if comp.start_with? ":"
-        @children.clear
-        create_and_save comp
-      else
-        child = @children[comp]
-        child = create_and_save comp if !child || (!child && child.leaf? && !child.wildcard?)
-        child
+      child = self[comp]
+      
+      if child.nil?
+        child = self.class.new comp
+        child.instance_variable_set "@parent", self
+        @children.reject!(&:leaf?) if comp.start_with? ":"
+        @children[comp] = child
       end
+
+      child
     end
 
-    def parse_path path, include_root=true
+    def parse_path path
       c = path.split "/"
-      if include_root
-        c[0] = '/'
-      else
-        c.delete_at(0) if c[0].empty?
-      end
+      c[0] = '/'
       c.delete_at(-1) if c[-1].empty?
       c
     end
     
     def map_path path, item, key
-      parse_path(path).inject(self) { |node, comp| node << comp }.content[key] = item
+      parse_path(path).inject(self) { |node, comp| node << comp }.content.set key, item
       path
     end
     
@@ -95,15 +80,18 @@ module Pine
       matched_params = {}
       
       walk = parse_path(path).inject self do |node, comp|
-        next node[comp] if node.name == "ROOT"
-        matched_comps << comp unless node.leaf?
-        child = node[comp]
-        matched_params[child.name[1..-1]] = comp if child.wildcard?
-        child
+        #break node if node.leaf?
+        next node[comp] if node.root?
+        
+        c = node[comp]
+        break node if c.nil?
+        matched_comps << comp
+        matched_params[c.name[1..-1]] = comp if c.wildcard?
+        c
       end
 
       return nil if walk.nil?
-      return nil if walk.root? #rescue true
+      return nil if walk.root?
 
       c = walk.content
       subpath = path.sub "/#{matched_comps.join("/")}", ""

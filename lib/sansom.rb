@@ -32,7 +32,7 @@ module Sansomable
 
     if m.nil?
       NOT_FOUND
-    else 
+    else
       if m.url_params.count > 0
         q = r.params.merge(m.url_params)
         s = q.map { |p| p.join '=' }.join("&")
