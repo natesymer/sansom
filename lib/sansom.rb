@@ -19,38 +19,41 @@ module Sansomable
   end
   
   def call env
-    return NOT_FOUND if tree.leaf?
+    return NOT_FOUND if tree.leaf? && tree.root?
     
     r = Rack::Request.new env
-    
-    if @before_block
-      res = @before_block.call r
-      return res if Rack::Fastlint.response res
-    end
-
     m = tree.match r.path_info, r.request_method
-
-    if m.nil?
-      NOT_FOUND
-    else
-      if m.url_params.count > 0
-        q = r.params.merge m.url_params
-        s = q.map { |p| p.join '=' }.join '&'
-        r.env["rack.request.query_hash"] = q
-        r.env["rack.request.query_string"] = s
-        r.env["QUERY_STRING"] = s
-        r.instance_variable_set "@params", r.POST.merge(q)
-      end
-      
-      if m.item.is_a? Proc
-        m.item.call r
-      elsif m.item.respond_to? :call
-        r.env["PATH_INFO"] = m.remaining_path
-        m.item.call r.env
-      else
-        raise InvalidRouteError, "Route handlers must be blocks or valid rack apps."
-      end
+    
+    return NOT_FOUND if m.nil?
+    
+    if @before_block && @before_block.arity == 1
+      bres = @before_block.call r
+      return bres if Rack::Fastlint.response bres
     end
+
+    if m.url_params.count > 0
+      q = r.params.merge m.url_params
+      s = q.map { |p| p.join '=' }.join '&'
+      r.env["rack.request.query_hash"] = q
+      r.env["rack.request.query_string"] = s
+      r.env["QUERY_STRING"] = s
+      r.instance_variable_set "@params", r.POST.merge(q)
+    end
+    
+    case m.item
+    when Proc then res = m.item.call r
+    else
+      raise InvalidRouteError, "Route handlers must be blocks or valid rack apps." unless m.item.respond_to? :call
+      r.env["PATH_INFO"] = m.remaining_path
+      res = m.item.call r.env
+    end
+    
+    if @after_block && @after_block.arity == 2
+      ares = @after_block.call r, res
+      return ares if Rack::Fastlint.response ares
+    end
+    
+    res
   end
   
   def start port=3001
@@ -60,6 +63,10 @@ module Sansomable
   
   def before &block
     @before_block = block
+  end
+  
+  def after &block
+    @after_block = block
   end
   
   def method_missing meth, *args, &block

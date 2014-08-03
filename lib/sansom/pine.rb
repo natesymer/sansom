@@ -4,7 +4,7 @@
 
 module Pine
   Result = Struct.new :item, :remaining_path, :url_params
-  
+
   class Content
     attr_reader :items, :map
     
@@ -41,12 +41,9 @@ module Pine
     end
     
     def [] k
-      if @children.member? k
-        @children[k]
-      else
-        c = @children.values.first
-        return c if (c.wildcard? rescue false)
-      end
+      return @children[k] if @children.member? k
+      c = @children.values.first
+      return c if (c.wildcard? rescue false)
     end
     
     def << comp
@@ -55,13 +52,13 @@ module Pine
       if child.nil?
         child = self.class.new comp
         child.instance_variable_set "@parent", self
-        @children.reject!(&:leaf?) if comp.start_with? ":"
+        @children.reject!(&:leaf?) if child.wildcard?
         @children[comp] = child
       end
 
       child
     end
-
+    
     def parse_path path
       c = path.split "/"
       c[0] = '/'

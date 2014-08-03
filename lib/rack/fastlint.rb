@@ -21,12 +21,12 @@ module Rack
       begin
         headers.each { |k,v|
           next if key =~ /^rack\..+$/
-          throw LintError unless k.kind_of? String
-          throw LintError unless v.kind_of? String
-          throw LintError if k.downcase == "status"
-          throw LintError unless k !~ /[:\n]/
-          throw LintError unless k !~ /[-_]\z/
-          throw LintError unless k =~ /\A[a-zA-Z][a-zA-Z0-9_-]*\z/
+          throw StandardError unless k.kind_of? String
+          throw StandardError unless v.kind_of? String
+          throw StandardError if k.downcase == "status"
+          throw StandardError unless k !~ /[:\n]/
+          throw StandardError unless k !~ /[-_]\z/
+          throw StandardError unless k =~ /\A[a-zA-Z][a-zA-Z0-9_-]*\z/
         }
       
         body.each { |part| throw LintError unless part.kind_of? String }
