@@ -6,10 +6,10 @@ require_relative "./rack/fastlint.rb"
 
 module Sansomable
   InvalidRouteError = Class.new StandardError
-  HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options].freeze
-  HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
+  HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options, :link, :unlink, :trace].freeze
+  RACK_HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
   NOT_FOUND = [404, {}, ["Not found."]].freeze
-  
+
   def tree
     if @tree.nil?
       @tree = Pine::Node.new "ROOT"
@@ -34,8 +34,8 @@ module Sansomable
       NOT_FOUND
     else
       if m.url_params.count > 0
-        q = r.params.merge(m.url_params)
-        s = q.map { |p| p.join '=' }.join("&")
+        q = r.params.merge m.url_params
+        s = q.map { |p| p.join '=' }.join '&'
         r.env["rack.request.query_hash"] = q
         r.env["rack.request.query_string"] = s
         r.env["QUERY_STRING"] = s
@@ -55,7 +55,7 @@ module Sansomable
   
   def start port=3001
     raise NoRoutesError if tree.leaf?
-    Rack::Handler.pick(HANDLERS).run self, :Port => port
+    Rack::Handler.pick(RACK_HANDLERS).run self, :Port => port
   end
   
   def before &block

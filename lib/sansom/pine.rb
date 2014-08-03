@@ -45,8 +45,7 @@ module Pine
         @children[k]
       else
         c = @children.values.first
-        return c if c.wildcard? rescue false
-        nil
+        return c if (c.wildcard? rescue false)
       end
     end
     
@@ -80,7 +79,7 @@ module Pine
       matched_params = {}
       
       walk = parse_path(path).inject self do |node, comp|
-        #break node if node.leaf?
+        break node if node.leaf?
         next node[comp] if node.root?
         
         c = node[comp]

@@ -6,13 +6,21 @@ Scientific, philosophical, abstract web 'picowork' named after Sansom street in 
 Philosophy
 -
 
-*A piece of software should not limit you to one way of thinking.*
+***A piece of software should not limit you to one way of thinking.***
 
 You can write a `Sansomable` for each logical unit of your API, but you also don't have to.
 
-You can also mount existing Rails/Sinatra apps in your `Sansomable`. But you also don't have to.
+You can also mount existing Rails/Sinatra/Rack apps in your `Sansomable`. But you also don't have to.
 
 You can write one `Sansomable` for your entire API.
+
+Fuck it.
+
+***A piece of software should not be a magic box.***
+
+A web framework is, however simplistically, a tool to connect code to a URL's path.
+
+A web framework doesn't provide an ORM, template rendering, nor change how ruby works to the point where you're not writing Ruby code but instead `Rails` or `Sinatra` code.
 
 Installation
 -
@@ -160,7 +168,7 @@ Notes
 -
 
 - `Sansom` does not pollute _any_ `Object` methods, including `initialize`
-- `Sansom` is under **190** lines of code at the time of writing. This includes
+- `Sansom` is under **250** lines of code at the time of writing. This includes
 	* Rack conformity & the DSL (`sansom.rb`)
 	* Custom tree-based routing (`pine.rb`)
 
