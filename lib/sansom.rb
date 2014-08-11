@@ -57,7 +57,7 @@ module Sansomable
     
       res
     rescue StandardError => e
-      b = @error_blocks[e.class]
+      b = (@error_blocks[e.class] || @error_blocks[:default]) rescue nil
       raise e if b.nil?
       b.call e, r
     end
@@ -68,7 +68,7 @@ module Sansomable
     Rack::Handler.pick(RACK_HANDLERS).run self, :Port => port
   end
   
-  def error error_key, &block
+  def error error_key=:default, &block
     @error_blocks ||= {}
     @error_blocks[error_key] = block
   end

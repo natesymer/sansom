@@ -53,3 +53,8 @@ Here's an example
 - PUBLIC RELEASE!
 - After block added
 - Improved routing behavior & speed
+
+0.1.1
+
+- Fix bad bug in method_missing
+- Added better error handling (per-error handling and a generic block that gets called if no specific handler is present)
