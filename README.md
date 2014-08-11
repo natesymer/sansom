@@ -186,6 +186,16 @@ Rails: **34ms**
 
 Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
 
+Todo
+-
+
+1. Returning more than just rack responses:
+   * Strings
+   * Objects
+   * Maybe more syntactic sugar
+2. (Even) more stability
+3. \<Your idea here\>
+
 Contributing
 -
 
