@@ -57,8 +57,9 @@ module Sansomable
     
       res
     rescue StandardError => e
-      raise if @error_block.nil?
-      @error_block.call e, r 
+      b = @error_blocks[e.class]
+      raise e if b.nil?
+      b.call e, r
     end
   end
   
@@ -67,8 +68,9 @@ module Sansomable
     Rack::Handler.pick(RACK_HANDLERS).run self, :Port => port
   end
   
-  def error &block
-    @error_block = block
+  def error error_key, &block
+    @error_blocks ||= {}
+    @error_blocks[error_key] = block
   end
   
   def before &block
@@ -80,6 +82,7 @@ module Sansomable
   end
   
   def method_missing meth, *args, &block
+    path, item = *args.dup.push(block)
     return super unless path && item
     return super unless item != self
     return super unless ROUTE_METHODS.include? meth
