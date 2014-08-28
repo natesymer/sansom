@@ -41,7 +41,7 @@ Here's an example
 
 0.0.6
 
-- Before block response checking
+- `before` block response checking
 
 0.0.7
 
@@ -51,10 +51,14 @@ Here's an example
 0.1.0
 
 - PUBLIC RELEASE!
-- After block added
+- `after` block
 - Improved routing behavior & speed
 
 0.1.1
 
 - Fix bad bug in method_missing
 - Added better error handling (per-error handling and a generic block that gets called if no specific handler is present)
+
+0.1.2
+
+- Fixed issue with `include` in the `Sansom` class
