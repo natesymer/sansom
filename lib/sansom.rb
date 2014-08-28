@@ -91,4 +91,4 @@ module Sansomable
 end
 
 Sansom = Class.new Object
-Sansom.include Sansomable
+Sansom.send :include, Sansomable

@@ -54,6 +54,14 @@ class FoodTypes < Sansom
   end
 end
 
+class Drink < Sansom
+  def template
+    get "/:asdf" do |r|
+      [200, {}, [r.params["asdf"]]]
+    end
+  end
+end
+
 class Food < Sansom
   def template
     get "/sushi" do |r|
@@ -61,6 +69,7 @@ class Food < Sansom
     end
     
     map "/types", FoodTypes.new
+    map "/drink", Drink.new
   end
 end
 
