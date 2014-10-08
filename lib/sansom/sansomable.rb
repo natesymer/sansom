@@ -11,7 +11,7 @@ module Sansomable
   ROUTE_METHODS = HTTP_VERBS+[:map]
   RACK_HANDLER_ORDER = ["puma", "unicorn", "thin"].freeze
   NOT_FOUND = [404, {}, ["Not found."]].freeze
-
+  
   def tree
     if @tree.nil?
       @tree = Pine::Node.new "ROOT"
@@ -29,7 +29,7 @@ module Sansomable
     return NOT_FOUND if m.nil?
     
     begin
-      if @before_block && @before_block.arity == 1
+      if @before_block
         bres = @before_block.call r
         return bres if Rack::Fastlint.response bres
       end
@@ -51,14 +51,14 @@ module Sansomable
         res = m.item.call r.env
       end
     
-      if @after_block && @after_block.arity == 2
+      if @after_block
         ares = @after_block.call r, res
         return ares if Rack::Fastlint.response ares
       end
     
       res
     rescue StandardError => e
-      b = (@error_blocks[e.class] || @error_blocks[:default]) rescue nil
+      b = @error_blocks[e.class] || @error_blocks[:default]
       raise e if b.nil?
       b.call e, r
     end
@@ -68,11 +68,9 @@ module Sansomable
     raise NoRoutesError if tree.leaf?
     
     handlers = Rack::Handler.handlers
-    handlers[handler.to_s] = const_get() unless handler.nil?
-    
-    names = handlers.keys
-    
-    handler = handlers.find do |h|
+    handlers[handler.to_s] = const_get(handler.to_s) unless handler.nil?
+
+    handler = handlers.keys.find do |h|
       begin
         require "rack/handler#{handler.gsub(/^[A-Z]+/) { |pre| pre.downcase }.gsub(/[A-Z]+[^A-Z]/, '_\&').downcase}"
       rescue
@@ -85,16 +83,17 @@ module Sansomable
     handlers[handler].run self, :Port => port
   end
   
-  def error error_key=:default, &block
-    @error_blocks ||= {}
-    @error_blocks[error_key] = block
+  def error error_key=nil, &block
+    (@error_blocks ||= {})[error_key || :default] = block
   end
   
   def before &block
+    raise ArgumentError, "" if block.arity != 1
     @before_block = block
   end
   
   def after &block
+    raise ArgumentError, "" if block.arity != 2
     @after_block = block
   end
   
