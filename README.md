@@ -16,100 +16,88 @@ You can write one `Sansomable` for your entire API.
 
 Fuck it.
 
-***A piece of software should not be a magic box.***
+***A tool should do one thing, and do it well. (Unix philosophy)***
 
-A web framework is, however simplistically, a tool to connect code to a URL's path.
+A web framework is, fundamentally, a tool to connect code to a URL's path.
 
-A web framework doesn't provide an ORM, template rendering, nor change how ruby works to the point where you're not writing Ruby code but instead `Rails` or `Sinatra` code.
+A web framework doesn't provide an ORM, template rendering, shortcuts, nor security patches. 
+
+***A web framework shall remain a framework***
+
+No single tool should get so powerful that it can overcome its master. Rails and Sinatra have been doing this: modifying the language beyond recognition. Rails has activerecord and Sinatra's blocks aren't really blocks.
 
 Installation
 -
 
 `gem install sansom`
 
-Usage
+General Usage
 -
-
-It's pretty simple. Instead of `Class`s storing routes, `Object`s store routes.
-
-There are two ways you can deploy `Sansom`:
-
-    # app.rb
-    
-    #!/usr/bin/env ruby
-
-	require "sansom"
-
-    s = Sansom.new
-    s.get "/" do |r|
-      # r is a Rack::Request
-      [200, { "Content-Type" => "text/plain" }, ["Hello Sansom"]]
-    end
-    s.start
-
-Or, the more production-ready version:
+Traditional approach:
 
     # config.ru
     
     require "sansom"
     
     s = Sansom.new
-    
-    s.get "/" do |r|
-      # r is a Rack::Request
-      [200, { "Content-Type" => "text/plain" }, ["Hello Sansom"]]
-    end
-    
+    # define routes on s
     run s
     
-But `Sansom` can do more than just that:
+One-file approach:
 
-It can be used in a similar fashion to Sinatra:
+    # app.rb
 
-    # myapi.rb
+	require "sansom"
+
+    s = Sansom.new
+    # define routes on s
+    s.start
     
-    #!/usr/bin/env ruby
-    
-    require "sansom"
-    
-    class MyAPI < Sansom
-      # This method is used to define Sansom routes
-      def template
-        get "/" do |r|
-          [200, { "Content-Type" => "text/plain" }, ["Hello Sansom"]]
-          # r is a Rack::Request
-        end
-      end
-    end
+They're basically the same, except the rack server evaluates config.ru in its own context. The config.ru approach allows for the config to be separated from the application code.
+
+Writing your own traditional-style webapp
+-
+
+Writing a one-file webapp is as simple as creating a `Sansomable`, defining routes on it, and calling start on it.
+
+####There is more footwork for a traditional-style webapp:
+
+Sansom is defined like this:
+
+    Sansom = Class.new Object
+    Sansom.send :include, Sansomable
+
+So you'll want your app to either `include Sansomable` or be a subclass of `Sansom`, so that a basic declaration looks like this.
+
+	# myapi.rb
+	
+	require "sansom"
+	
+	class MyAPI
+	  include Sansomable
+	  def template
+	  	# define routes here
+	  end
+	end
     
 And your `config.ru` file
 
     # config.ru
     
-    require "sansom"
     require "./myapi"
     
     run MyAPI.new
     
-Sansom can also map other instances of Sansom to a route. Check this:
-    
-    # myapi.rb
-    
-    #!/usr/bin/env ruby
-    
-    require "sansom"
-    
-    class MyAPI < Sansom
-      # This method is used to define Sansom routes
-      def template
-        get "/" do |r|
-          [200, { "Content-Type" => "text/plain" }, ["Hello Sansom"]]
-          # r is a Rack::Request
-        end
-      end
+Defining Routes
+-
+Routes can be defined like so:
+
+    s = Sansom.new
+    s.get "/" do |r| # r is a Rack::Request
+	  [200, {}, ["Return a Rack response."]]
     end
-    
-Let's say you've written a new version of your api. No problem.
+
+You can replace `get` with any http verb. Or `map`, if you want to map a subsansom. Let's say you've written a new version of your api. No problem:
     
     # app.rb
     
@@ -119,39 +107,17 @@ Let's say you've written a new version of your api. No problem.
     s.map "/v1", MyAPI.new
     s.map "/v2", MyNewAPI.new
     s.start
-    
-Or maybe you want to mount your Rails/Sinatra/whatever app
 
-    # app.rb
-    
-    require "sansom"
-    
-    s = Sansom.new
-    s.map "/api", SinatraApp.new
-    s.map "/", RailsApp.new
-    s.start
-    
-Lastly, any object can become a "`Sansom`" through a mixin:
+Before/After filters
+-
 
-    # mixin.ru
-    
-    class Mixin < Hash
-      include Sansomable
-  
-      def template
-        get "/sansomable" do |r|
-          [200, { "Content-Type" => "text/plain"}, ["Sansomable Hash"]]
-        end
-      end
-    end
-    
-    run Mixin.new
-    
-If you look at how `Sansom` is defined, it makes sense:
+TODO: write this
 
-    Sansom = Class.new Object
-    Sansom.include Sansomable
-    
+Errors
+-
+
+TODO: write this
+
 Matching
 -
 
@@ -162,7 +128,10 @@ Matching
   	1. The route matching the path and verb
   	2. The first Subsansom that matches the route & verb
   	3. The first mounted non-`Sansom` rack app matching the route
-  
+  	
+Some examples of routes Sansom recognizes:  
+	`/path/to/resource` - Standard path  
+	`/users/:id/show` - Parameterized path  
 
 Notes
 -
@@ -194,6 +163,7 @@ Todo
    * Objects
    * Maybe more syntactic sugar
 2. (Even) more stability
+3. Semi-wildcard paths (/path/to/resource.<format>)
 3. \<Your idea here\>
 
 Contributing
