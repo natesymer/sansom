@@ -198,16 +198,17 @@ Speed
 
 Well, that's great and all, but how fast is "hello world" example in comparision to Rack or Sinatra?
 
-Rack: **15ms**<br />
-Sansom: **15ms**<br />
+Rack: **12ms**<br />
+Sansom: **15ms**\*<br />
 Sinatra: **28ms**<br />
-Rails: **34ms***
+Rails: **34ms****
 
 (results are measured locally using Puma and are rounded down)
 
 Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
 
-\* Rails loads a rich welcome page which may contribute to its slowness
+\* Uncached. If a lookup is cached, it will be pretty much as fast as Rack.
+\** Rails loads a rich welcome page which may contribute to its slowness
 
 Todo
 -

@@ -8,25 +8,33 @@
 # Pine optimizes lookup. You could say it matches a route in
 # something resembling logarithmic time, but really is linear time
 # due to child lookups (Children are just iterated over)
+#
+# Additionally, Pine caches. So, for an app with mostly static
+# route paths, a Sansom app will be as fast as a Rack app after
+# the Sansom app's routes have been matched and cached.
 
 module Pine
   Result = Struct.new :item, :remaining_path, :matched_path, :url_params
   WILDCARD_REGEX = /<(\w*)\b[^>]*>/.freeze
   
+  # The class you use.
   class Tree
     def initialize
       @cache = {}
       @root = Pine::Node.new
     end
     
+    # map_path "/food", Subsansom.new, :map
+    # map_path "/", my_block, :get
     def map_path path, item, key
       @cache.clear
       @root.map_path path, item, key
     end
     
+    # match "/", :get
     def match path, verb
-      k = verb + " " + path
-      return @cache[k] if @cache.member k
+      k = verb.to_s + path.to_s
+      return @cache[k] if @cache.member? k
       r = @root.match path, verb
       @cache[k] = r
       r
@@ -38,24 +46,24 @@ module Pine
   end
   
   class Node
-    ROOT_NAME = "ROOT"
+    ROOT = "/"
     
     attr_reader :name # node "payload" data
     attr_reader :parent, :children # node reference system
     attr_reader :wildcard, :wildcard_range # wildcard data
     attr_reader :rack_app, :subsansoms, :blocks # mapping
 
-    def initialize name=ROOT_NAME
+    def initialize name=ROOT
       @name = name.freeze
       @children = {}
       @parent = nil
+      @blocks = {}
+      @subsansoms = []
+      @rack_app = nil
       
-      if name != ROOT_NAME
-        @blocks = {}
-        @subsansoms = []
-        @rack_app = nil
+      if root?
         if name.start_with? ":"
-          @wildcard_range = [0, 0].freeze
+          @wildcard_range = Range.new(0, 0).freeze
         else
           m = name.match WILDCARD_REGEX
           unless m.nil?
@@ -68,7 +76,7 @@ module Pine
     end
     
     def root?
-      parent.nil?
+      name == ROOT
     end
   
     def leaf?
@@ -80,32 +88,27 @@ module Pine
     end
     
     def semiwildcard?
-      wildcard? && !(wildcard_range.first == wildcard_range.last && wildcard_range.last == 0)
+      !wildcard_range.nil? && wildcard_range.size != 1
     end
     
     def wildcard?
-      !wildcard.nil? && !wildcard.empty?
+      !wildcard_range.nil? && wildcard_range.size == 1
     end
 
+    # WARNING: This has a potential to be a bottleneck
     def [] k
-      return nil if children.empty?
-      return children[k] if children.member? k # try normal lookup
-      
-      # try complete wildcard
-      if children.count == 1
-        c = children.values.first
-        return c if (c.wildcard? rescue false)
+      case
+      when children.empty? then nil
+      when children.member?(k) then children[k] # static lookup
+      else
+        children.each do |name, child|
+          break child if child.wildcard?
+          next unless child.semiwildcard?
+          next unless name.start_with? name[0..c.wildcard_range.first-1]
+          next unless name.end_with? name[c.wildcard_range.last+1..-1]
+          break child
+        end
       end
-      
-      # try semiwildcard
-      children.each do |name,c|
-        next unless c.semiwildcard?
-        start_w = c.name[0..c.wildcard_range.first-1]
-        end_w = c.name[c.wildcard_range.last+1..-1]
-        return c if name.start_with?(start_w) && name.end_with?(end_w)
-      end
-      
-      nil
     end
     
     def << comp
@@ -114,22 +117,22 @@ module Pine
       if child.nil?
         child = self.class.new comp
         child.instance_variable_set "@parent", self
-        @children.reject!(&:leaf?) if child.wildcard? && !child.semiwildcard?
+        @children.reject!(&:leaf?) if child.wildcard?
         @children[comp] = child
       end
 
       child
     end
     
-    def parse_path path
-      c = path.split "/"
-      c[0] = '/'
-      c.delete_at(-1) if c[-1].empty?
-      c
+    # returns all non-root path components
+    # path_comps("/my/path/")
+    # => ["my", "path"]
+    def path_comps path
+      path[1..(path.last == "/" ? -2 : -1)].split "/"
     end
     
     def map_path path, item, key
-      node = parse_path(path).inject(self) { |n, comp| n << comp }
+      node = root? ? self : path_comps(path).inject(self) { |n, comp| n << comp }
       if key == :map && !item.is_a?(Proc)
         if item.singleton_class.include?(Sansomable)
           node.subsansoms << item
@@ -147,16 +150,14 @@ module Pine
       matched_length = 0
       matched_params = {}
       
-      walk = parse_path(path).inject self do |n, comp|
+      walk = path_comps(path).inject self do |n, comp|
         c = n[comp]
-        case c
-        when self then c
-        when nil then break nil # break n
-        else
+        break if c.nil?
+        if !c.root?
           matched_length += comp.length+1
           matched_params[c.wildcard] = comp[c.wildcard_range] if c.wildcard?
-          c
         end
+        c
       end
       
       return nil if walk.nil?
