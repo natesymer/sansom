@@ -3,84 +3,76 @@
 require "rack"
 require_relative "./pine"
 require_relative "../rack/fastlint"
-require_relative "../rack/handler_helper"
 
 module Sansomable
-  InvalidRouteError = Class.new StandardError
+  RouteError = Class.new StandardError
+  HandlerError = Class.new StandardError
+  ResponseError = Class.new StandardError
   HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options, :link, :unlink, :trace].freeze
-  ROUTE_METHODS = HTTP_VERBS+[:map]
-  RACK_HANDLER_ORDER = ["puma", "unicorn", "thin"].freeze
-  NOT_FOUND = [404, {}, ["Not found."]].freeze
-  
-  def tree
+  ACTION_VERBS = [:map].freeze
+  VALID_VERBS = HTTP_VERBS+ACTION_VERBS
+  RACK_HANDLERS = ["puma","unicorn","thin","webrick"].freeze
+
+  def _tree
     if @tree.nil?
       @tree = Pine::Node.new "ROOT"
       template if respond_to? :template
+      routes if respond_to? :routes
     end
     @tree
   end
   
+  def _call_route *args, handler
+    raise RouteError, "Handler is nil." if handler.nil?
+    raise RouteError, "Route handler's arity is incorrect." if handler.respond_to?(:arity) && args.count != handler.arity
+    raise NoMethodError, "Route handler doesn't respond to call(env). Route handlers must be blocks or valid rack apps." unless handler.respond_to? :call
+    res = handler.call *args
+    raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res # custom method
+    res = [200, {}, [res.to_str]] if res.respond_to? :to_str
+    res
+  end
+  
+  def _not_found
+    return _call_route r, @not_found_block unless @not_found_block.nil?
+    [404, {}, ["Not found."]]
+  end
+  
   def call env
-    return NOT_FOUND if tree.leaf? && tree.root?
-  
-    r = Rack::Request.new env
-    m = tree.match r.path_info, r.request_method
-  
-    return NOT_FOUND if m.nil?
+    return _not_found if _tree.singleton? # no routes
+    m = _tree.match env["PATH_INFO"], env["REQUEST_METHOD"]
+    return _not_found if m.nil?
     
     begin
-      if @before_block
-        bres = @before_block.call r
-        return bres if Rack::Fastlint.response bres
+      r = Rack::Request.new env
+      r.path_info = m.remaining_path unless m.item.is_a? Proc
+      
+      unless m.url_params.empty?
+        r.GET.merge! m.url_params
+        r.params.merge! m.url_params
       end
-
-      if m.url_params.count > 0
-        q = r.params.merge m.url_params
-        s = q.map { |p| p.join '=' }.join '&'
-        r.env["rack.request.query_hash"] = q
-        r.env["rack.request.query_string"] = s
-        r.env["QUERY_STRING"] = s
-        r.instance_variable_set "@params", r.POST.merge(q)
-      end
-    
-      case m.item
-      when Proc then res = m.item.call r
-      else
-        raise InvalidRouteError, "Route handlers must be blocks or valid rack apps." unless m.item.respond_to? :call
-        r.env["PATH_INFO"] = m.remaining_path
-        res = m.item.call r.env
-      end
-    
-      if @after_block
-        ares = @after_block.call r, res
-        return ares if Rack::Fastlint.response ares
-      end
-    
+      
+      res = _call_route r, @before_block if @before_block # call before block
+      res ||= _call_route (m.item.is_a?(Proc) ? r : r.env), m.item # call route handler block
+      res ||= _call_route r, res, @after_block if @after_block # call after block
+      res ||= _not_found # return response if not found
       res
-    rescue StandardError => e
+    rescue => e
+      raise if @error_blocks.nil? || @error_blocks.empty?
       b = @error_blocks[e.class] || @error_blocks[:default]
-      raise e if b.nil?
+      raise if b.nil?
       b.call e, r
     end
   end
   
-  def start handler=nil, port=3001
-    raise NoRoutesError if tree.leaf?
-    
-    handlers = Rack::Handler.handlers
-    handlers[handler.to_s] = const_get(handler.to_s) unless handler.nil?
-
-    handler = handlers.keys.find do |h|
-      begin
-        require "rack/handler#{handler.gsub(/^[A-Z]+/) { |pre| pre.downcase }.gsub(/[A-Z]+[^A-Z]/, '_\&').downcase}"
-      rescue
-        false
-      else
-        true
-      end
+  def start port=3001, handler=""
+    raise RouteError, "There are no mapped routes." if _tree.leaf?
+    begin
+      h = Rack::Handler.get handler.to_s
+    rescue LoadError, NameError
+      h = Rack::Handler.pick(RACK_HANDLERS)
+    ensure
+      h.run self, :Port => port
     end
-    
-    handlers[handler].run self, :Port => port
   end
   
   def error error_key=nil, &block
@@ -88,19 +80,25 @@ module Sansomable
   end
   
   def before &block
-    raise ArgumentError, "" if block.arity != 1
+    raise ArgumentError, "Before filter blocks must take one argument." if block.arity != 1
     @before_block = block
   end
   
   def after &block
-    raise ArgumentError, "" if block.arity != 2
+    raise ArgumentError, "After filter blocks must take two arguments." if block.arity != 2
     @after_block = block
+  end
+  
+  def not_found &block
+    raise ArgumentError, "Not found blocks must take one argument." if block.arity != 1
+    @not_found_block = block
   end
   
   def method_missing meth, *args, &block
     path, item = *args.dup.push(block)
     return super unless path && item && item != self
-    return super unless ROUTE_METHODS.include? meth
-    tree.map_path path, item, meth
+    return super unless VALID_VERBS.include? meth
+    return super unless item.respond_to? :call
+    _tree.map_path path, item, meth
   end
 end

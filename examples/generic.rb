@@ -56,8 +56,8 @@ end
 
 class Drink < Sansom
   def template
-    get "/:asdf" do |r|
-      [200, {}, [r.params["asdf"]]]
+    get "/:beverage" do |r|
+      [200, {}, [r[:beverage].inspect]]
     end
   end
 end
@@ -80,12 +80,18 @@ s.get "/" do |r|
 end
 
 s.get "/something" do |r|
-  [200, { "Content-Type" => "text/plain"}, ["something"]]
+  [200, { "Content-Type" => "text/plain"}, ["something is here"]]
 end
 
 s.get "/something/this" do |r|
   [200, { "Content-Type" => "text/plain"}, ["something this"]]
 end
+
+s.get "/my/resource.<format>" do |r|
+  [200, {}, [r.params.inspect]]
+end
+
+s.map "/drink", Drink.new
 
 s.map "/food", Food.new
 

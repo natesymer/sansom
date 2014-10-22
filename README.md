@@ -150,7 +150,25 @@ You can also write after filters to tie up the loose ends of a response. If they
 Errors
 -
 
-TODO: write this
+Error blocks allow for the app to return something parseable when an error is raised.
+
+    require "sansom"
+    require "json"
+    
+    s = Sansom.new
+    s.error do |err, r| # err is the error, r is a Rack::Request
+      [500, {"yo" => "shit"}, [{ :message => err.message }.to_json]]
+    end
+    
+There is also a unique error 404 handler:
+
+    require "sansom"
+    require "json"
+    
+    s = Sansom.new
+    s.not_found do |r| # r is a Rack::Request
+      [404, {"yo" => "shit"}, [{ :message => "not found" }.to_json]]
+    end
 
 Matching
 -
@@ -185,11 +203,11 @@ Sansom: **15ms**<br />
 Sinatra: **28ms**<br />
 Rails: **34ms***
 
-(results are rounded down)
+(results are measured locally using Puma and are rounded down)
 
 Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
 
-\* Rails loads this intricate welcome page which may be large
+\* Rails loads this intricate welcome page which may contribute to slowness
 
 Todo
 -
