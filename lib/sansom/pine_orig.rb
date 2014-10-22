@@ -10,31 +10,20 @@
 # due to child lookups (Children are just iterated over)
 
 module Pine
-  module Tree
-    def map_path path, item, key
-      
-    end
-    
-    def match path, verb
-      
-    end
-  end
-  
+  Result = Struct.new :item, :remaining_path, :matched_path, :url_params
+  WILDCARD_REGEX = /<(\w*)\b[^>]*>/
+
   class Content
-    attr_reader :rack_apps, :subsansoms, :blocks
+    attr_reader :items, :map
     
     def initialize
-      @rack_apps = []
-      @subsansoms = []
-      @blocks = {}
+      @items = []
+      @map = {}
     end
     
     def set k,v
-      if k == :map
-        (v.singleton_class.include?(Sansomable) @subsansoms : @rack_apps) << v
-      else
-        @blocks[k] = v
-      end
+      @items << v if k == :map
+      @map[k] = v unless k == :map
     end
   end
   
@@ -142,13 +131,17 @@ module Pine
       remaining = path[matched_length..-1]
       matched = path[0..matched_length-1]
 
-      match = c.blocks[verb.downcase.to_sym]
-      match ||= c.subsansoms.detect { |i| i._tree.match remaining, verb }
-      match ||= c.rack_apps.first
+      match = c.map[verb.downcase.to_sym]
+      match ||= c.items.detect { |i| sansom?(i) && i._tree.match(remaining, verb) }
+      match ||= c.items.detect { |i| !sansom?(i) }
 
       return nil if match.nil?
       
       Result.new match, remaining, matched, matched_params
+    end
+    
+    def sansom? obj
+      obj.singleton_class.include? Sansomable
     end
   end
 end

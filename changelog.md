@@ -62,3 +62,15 @@ Here's an example
 0.1.2
 
 - Fixed issue with `include` in the `Sansom` class
+
+0.2.0
+
+- Rewrite internals to:
+  1. Avoid collisions with the including class
+  2. Improve performance
+  3. Look better
+  4. **Avoid bugs**
+  
+- Route match caching by path and HTTP method  
+&nbsp;&nbsp;->Should improve performance for static paths dramatically
+  

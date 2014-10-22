@@ -207,18 +207,14 @@ Rails: **34ms***
 
 Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
 
-\* Rails loads this intricate welcome page which may contribute to slowness
+\* Rails loads a rich welcome page which may contribute to its slowness
 
 Todo
 -
 
-1. Returning more than just rack responses:
-   * Strings
-   * Objects
-   * Maybe more syntactic sugar
-2. (Even) more stability
-3. Semi-wildcard paths (/path/to/resource.\<format\>)
-3. \<Your idea here\>
+* Multiple return types for routes
+
+If you have any ideas, let me know!
 
 Contributing
 -
