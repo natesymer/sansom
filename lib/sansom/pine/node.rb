@@ -37,7 +37,7 @@ module Pine
           @wildcard_range = Range.new(0, 0).freeze
           @wildcard = @name[wc_delim.length..-1].freeze
         else
-          r = semiwildcard_delim == '<' ? WILDCARD_REGEX : /#{swc_delim}(\w*)\b[^#{swc_delim}]*#{swc_delim}/
+          r = ['<','>'].include? semiwildcard_delim ? WILDCARD_REGEX : /#{swc_delim}(\w*)\b[^#{swc_delim}]*#{swc_delim}/
           m = @name.match r
           unless m.nil?
             o = m.offset 1
