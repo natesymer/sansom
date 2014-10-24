@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require "rack"
-require_relative "./pine"
+require_relative "./pine.rb"
 require_relative "../rack/fastlint"
 
 module Sansomable
@@ -47,15 +47,15 @@ module Sansomable
     r = Rack::Request.new env
     
     begin
-      r.path_info = m.remaining_path unless Proc === m.item
+      r.path_info = m.remaining_path unless Proc === m.handler
       
-      unless m.url_params.empty?
-        r.GET.merge! m.url_params
-        r.params.merge! m.url_params
+      unless m.params.empty?
+        r.GET.merge! m.params
+        r.params.merge! m.params
       end
       
       res = _call_route @_before, r if @_before # call before block
-      res ||= _call_route m.item, (Proc === m.item ? r : r.env) # call route handler block
+      res ||= _call_route m.handler, (Proc === m.handler ? r : r.env) # call route handler block
       res ||= _call_route @_after, r, res if @_after # call after block
       res ||= _not_found
       res

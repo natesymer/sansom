@@ -207,7 +207,7 @@ Rails: **34ms****
 
 Hey [Konstantine](https://github.com/rkh), *put that in your pipe and smoke it*.
 
-\* Uncached. If a lookup is cached, it will be pretty much as fast as Rack.
+\* Uncached. If a tree lookup is cached, it will be pretty much as fast as Rack.
 \** Rails loads a rich welcome page which may contribute to its slowness
 
 Todo
@@ -220,10 +220,4 @@ If you have any ideas, let me know!
 Contributing
 -
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-**Please make sure you don't add tons and tons of code. Part of `Sansom`'s beauty is is brevity.**
+You know the drill. But ** make sure you don't add tons and tons of code. Part of `Sansom`'s beauty is is brevity.**
