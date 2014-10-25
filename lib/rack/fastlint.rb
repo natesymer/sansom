@@ -26,7 +26,7 @@ module Rack
         next if k.start_with? "rack."
         return false unless k.kind_of? String
         return false unless v.kind_of? String
-        return false unless k == "Status"
+        return false if k == "Status"
         return false unless k !~ /[:\n]/
         return false unless k !~ /[-_]\z/
         return false unless k =~ /\A[a-zA-Z][a-zA-Z0-9_-]*\z/

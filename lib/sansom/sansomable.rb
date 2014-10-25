@@ -28,7 +28,8 @@ module Sansomable
     raise RouteError, "Route handler's arity is incorrect." if handler.respond_to?(:arity) && args.count != handler.arity
     raise NoMethodError, "Route handler doesn't respond to call(env). Route handlers must be blocks or valid rack apps." unless handler.respond_to? :call
     res = handler.call *args
-    res = res.finish if Rack::Response === res
+    res = res.finish if res.is_a? Rack::Response
+    puts res.inspect
     raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res # custom method
     res = [200, {}, [res.to_str]] if res.respond_to? :to_str
     res

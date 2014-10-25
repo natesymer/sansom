@@ -34,10 +34,10 @@ module Pine
       
       unless root?
         if @name.start_with? wildcard_delim
-          @wildcard_range = Range.new(0, 0).freeze
+          @wildcard_range = Range.new(0, -1).freeze
           @wildcard = @name[wc_delim.length..-1].freeze
         else
-          r = ['<','>'].include? semiwildcard_delim ? WILDCARD_REGEX : /#{swc_delim}(\w*)\b[^#{swc_delim}]*#{swc_delim}/
+          r = ['<','>'].include?(semiwildcard_delim) ? WILDCARD_REGEX : /#{swc_delim}(\w*)\b[^#{swc_delim}]*#{swc_delim}/
           m = @name.match r
           unless m.nil?
             o = m.offset 1
@@ -66,11 +66,11 @@ module Pine
     end
     
     def semiwildcard?
-      !wildcard_range.nil? && wildcard_range.size != 1
+      !wildcard_range.nil? && wildcard_range.size != 0
     end
     
     def wildcard?
-      !wildcard_range.nil? && wildcard_range.size == 1
+      !wildcard_range.nil? && wildcard_range.size == 0
     end
     
     # returns true if self is either a wildcard or a semiwildcard

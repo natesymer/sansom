@@ -58,6 +58,7 @@ module Pine
 
       walk = path_comps(path).inject @root do |n, comp|
         child = n[comp]
+        puts child.inspect
         break if child.nil?
         matched_length += comp.length+1
         matched_params[child.wildcard] = comp[child.wildcard_range] if child.dynamic?
