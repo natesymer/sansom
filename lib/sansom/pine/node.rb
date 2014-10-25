@@ -11,7 +11,7 @@ module Pine
     ROOT = "/"
     
     attr_reader :name # node "payload" data
-    attr_reader :parent, :children # node reference system
+    attr_reader :parent # node reference system
     attr_reader :wildcard, :wildcard_range # wildcard data
     attr_reader :rack_app, :subsansoms, :blocks # mapping
     attr_reader :end_seq, :start_seq
@@ -36,6 +36,8 @@ module Pine
         if @name.start_with? wildcard_delim
           @wildcard_range = Range.new(0, -1).freeze
           @wildcard = @name[wc_delim.length..-1].freeze
+          @start_seq = "".freeze
+          @end_seq = "".freeze
         else
           r = ['<','>'].include?(semiwildcard_delim) ? WILDCARD_REGEX : /#{swc_delim}(\w*)\b[^#{swc_delim}]*#{swc_delim}/
           m = @name.match r
@@ -47,14 +49,21 @@ module Pine
             @end_seq = wildcard_range.last == -1 ? "" : @name[wildcard_range.last+1..-1].freeze
           end
         end
-        
-        @start_seq ||= "".freeze
-        @end_seq ||= "".freeze
       end
     end
     
     def inspect
-      "<#{self.class}: '#{name}', #{dynamic? ? "Wildcard: '" + wildcard + "' #{wildcard_range.inspect}, " : "" }#{subsansoms.count} subsansoms, #{blocks.count} routes>"
+      "#<#{self.class}: #{name.inspect}, #{dynamic? ? "Wildcard: '" + wildcard + "' #{wildcard_range.inspect}, " : "" }#{@children.count} children, #{leaf? ? "leaf" : "internal node"}>"
+    end
+    
+    def siblings
+      s = parent.children.dup
+      s.delete name
+      s.values
+    end
+    
+    def children
+      @children.values
     end
     
     def root?
@@ -62,7 +71,7 @@ module Pine
     end
   
     def leaf?
-      children.empty?
+      children.empty? && subsansoms.empty? && rack_app.nil?
     end
     
     def semiwildcard?
@@ -82,11 +91,11 @@ module Pine
     def [] comp
       case
       when comp.nil? || comp.empty? then raise ArgumentError, "Invalid path component."; nil
-      when children.empty? then nil
-      when children.member?(comp) then children[comp]
-      when children.count == 1 && @wildcard_next then children.values.first
+      when @children.empty? then nil
+      when @children.member?(comp) then @children[comp]
+      when @children.count == 1 && [@wildcard_next, @swildcard_next].any? then @children.values.first
       else
-        children.values.detect { |c| c.dynamic? && comp.start_with?(c.start_seq) && comp.end_with?(c.end_seq) }
+        @children.values.detect { |c| c.dynamic? && comp.start_with?(c.start_seq) && comp.end_with?(c.end_seq) }
       end
     end
     
@@ -97,20 +106,14 @@ module Pine
       if c.nil?
         c = self.class.new comp
         c.instance_variable_set "@parent", self
-
-        if c.dynamic?
-          children.reject! do |_,i|
-            next false if i == c
-            next true if i.leaf? && c.wildcard?
-            does_match = c.start_seq == i.start_seq && c.end_seq == i.end_seq # i and c both match the same things
-            i.children.each { |_,j| j.instance_variable_set "@parent", c } unless does_match
-            does_match
-          end
-        end
+      #  children.reject! { |_,c| c.leaf? } if c.wildcard?
+        @children[comp] = c
       end
 
-      @wildcard_next = c.wildcard?
-      children[comp] = c
+      @swildcard_next = true if c.semiwildcard?
+      @wildcard_next = true if c.wildcard?
+      
+      c
     end
   end
 end

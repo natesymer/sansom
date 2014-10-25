@@ -6,7 +6,6 @@ require_relative "../rack/fastlint"
 
 module Sansomable
   RouteError = Class.new StandardError
-  HandlerError = Class.new StandardError
   ResponseError = Class.new StandardError
   HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options, :link, :unlink, :trace].freeze
   ACTION_VERBS = [:map].freeze
@@ -23,13 +22,12 @@ module Sansomable
     @_tree
   end
   
-  def _call_route handler, *args
-    raise RouteError, "Handler is nil." if handler.nil?
-    raise RouteError, "Route handler's arity is incorrect." if handler.respond_to?(:arity) && args.count != handler.arity
-    raise NoMethodError, "Route handler doesn't respond to call(env). Route handlers must be blocks or valid rack apps." unless handler.respond_to? :call
+  def _call_handler handler, *args
+    raise ArgumentError, "Handler must not be nil." if handler.nil?
+    raise ArgumentError, "Handler must be a valid rack app." unless handler.respond_to? :call
+    raise ArgumentError, "Handler cannot take all passed args." if handler.respond_to?(:arity) && args.count != handler.arity
     res = handler.call *args
     res = res.finish if res.is_a? Rack::Response
-    puts res.inspect
     raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res # custom method
     res = [200, {}, [res.to_str]] if res.respond_to? :to_str
     res
@@ -51,20 +49,18 @@ module Sansomable
       r.path_info = m.remaining_path unless Proc === m.handler
       
       unless m.params.empty?
-        r.GET.merge! m.params
-        r.params.merge! m.params
+        r.env["rack.request.query_string"] = r.query_string # now Rack::Request#GET will return r.env["rack.request.query_hash"]
+        (r.env["rack.request.query_hash"] ||= {}).merge! m.params # update the necessary field in the hash
+        r.instance_variable_set "@params", nil # tell Rack::Request to recalc Rack::Request#params
       end
       
-      res = _call_route @_before, r if @_before # call before block
-      res ||= _call_route m.handler, (Proc === m.handler ? r : r.env) # call route handler block
-      res ||= _call_route @_after, r, res if @_after # call after block
+      res = _call_handler @_before, r if @_before # call before block
+      res ||= _call_handler m.handler, (Proc === m.handler ? r : r.env) # call route handler block
+      res ||= _call_handler @_after, r, res if @_after # call after block
       res ||= _not_found
       res
     rescue => e
-      raise if @_error_blocks.nil? || @_error_blocks.empty?
-      b = @_error_blocks[e.class] || @_error_blocks[:default]
-      raise if b.nil?
-      b.call e, r
+      _call_handler @_error_blocks[e.class], e, r rescue raise e
     end
   end
   
@@ -80,21 +76,21 @@ module Sansomable
   end
   
   def error error_key=nil, &block
-    (@_error_blocks ||= {})[error_key || :default] = block
+    (@_error_blocks ||= Hash.new { |h| h[:default] })[error_key || :default] = block
   end
   
   def before &block
-    raise ArgumentError, "Before filter blocks must take one argument." if block.arity != 1
+    raise ArgumentError, "Before filter blocks must take one argument." if block && block.arity != 1
     @_before = block
   end
   
   def after &block
-    raise ArgumentError, "After filter blocks must take two arguments." if block.arity != 2
+    raise ArgumentError, "After filter blocks must take two arguments." if block && block.arity != 2
     @_after = block
   end
   
   def not_found &block
-    raise ArgumentError, "Not found blocks must take one argument." if block.arity != 1
+    raise ArgumentError, "Not found blocks must take one argument." if block && block.arity != 1
     @_not_found = block
   end
   

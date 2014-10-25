@@ -27,26 +27,25 @@ module Pine
     # map_path "/food", Subsansom.new, :map
     # map_path "/", my_block, :get
     # it's also chainable
-    def map_path path, item, key
+    def map_path path, handler, key
       @cache.clear
 
       node = (path == "/") ? @root : path_comps(path).inject(@root) { |n, comp| n << comp } # Fucking ruby interpreter
 
-      if key == :map && !item.is_a?(Proc) # fucking ruby interpreter
-        if item.singleton_class.include? Sansomable
-          node.subsansoms << item
+      if key == :map && !handler.is_a?(Proc) # fucking ruby interpreter
+        if handler.singleton_class.include? Sansomable
+          node.subsansoms << handler
         else
-          node.rack_app = item
+          node.rack_app = handler
         end
       else
-        node.blocks[key] = item
+        node.blocks[key] = handler
       end
       
       self
     end
     
     # match "/", :get
-    # TODO: Fix this in relationship to the root node.
     def match path, verb
       k = verb.to_s + path.to_s
       return @cache[k] if @cache.has_key? k
@@ -55,19 +54,20 @@ module Pine
       
       matched_length = 0
       matched_params = {}
+      matched_wildcard = false
 
       walk = path_comps(path).inject @root do |n, comp|
-        child = n[comp]
-        puts child.inspect
-        break if child.nil?
+        c = n[comp]
+        break n if c.nil?
         matched_length += comp.length+1
-        matched_params[child.wildcard] = comp[child.wildcard_range] if child.dynamic?
-        child
+        if c.dynamic?
+          matched_params[c.wildcard] = comp[c.wildcard_range] 
+          matched_wildcard = true
+        end
+        c
       end
       
       return nil if walk.nil?
-      
-      puts matched_params.inspect
 
       remaining = path[matched_length..-1]
       match = walk.blocks[verb.downcase.to_sym]
@@ -77,7 +77,7 @@ module Pine
       return nil if match.nil?
       
       r = Match.new match, remaining, path[0..matched_length-1], matched_params
-      @cache[k] = r
+      @cache[k] = r unless matched_wildcard
       r
     end
     
