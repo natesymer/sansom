@@ -107,6 +107,7 @@ module Pine
         c = self.class.new comp
         c.instance_variable_set "@parent", self
       #  children.reject! { |_,c| c.leaf? } if c.wildcard?
+      # TODO: Remove overshadowed children
         @children[comp] = c
       end
 
