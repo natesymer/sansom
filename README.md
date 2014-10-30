@@ -183,23 +183,25 @@ Matching
   	
 Some examples of routes Sansom recognizes:  
 	`/path/to/resource` - Standard path  
-	`/users/:id/show` - Parameterized path  
+	`/users/:id/show` - Parameterized "wildcard" path
+	`/services/show.<format>` - Semi-wilcard
 
 Notes
 -
 
 - `Sansom` does not pollute _any_ `Object` methods, including `initialize`
-- `Sansom` is under **250** lines of code at the time of writing. This includes
-	* Rack conformity & the DSL (`sansom.rb`)
-	* Custom tree-based routing (`pine.rb`)
+- No regexes are used in route matching, the're 3x slower than raw string manipulation. They are used in mapping semiwildcards.
+- `Sansom` is under **400** lines of code at the time of writing. This includes
+	* Rack conformity & the DSL (`sansom.rb`) (about 100 lines)
+	* Custom tree-based routing (`sanom/pine.rb`) (
 
 Speed
 -
 
 Well, that's great and all, but how fast is "hello world" example in comparision to Rack or Sinatra?
 
-Rack: **12ms**<br />
-Sansom: **15ms**\*<br />
+Rack: **11ms**<br />
+Sansom: **14ms**\*<br />
 Sinatra: **28ms**<br />
 Rails: **34ms****
 
