@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require "rack"
-require_relative "./pine.rb"
+require_relative "./pine"
 require_relative "../rack/fastlint"
 
 module Sansomable
@@ -13,13 +13,13 @@ module Sansomable
   RACK_HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
   NOTFOUND_TEXT = "Not found.".freeze
 
-  def _tree
-    if @_tree.nil?
-      @_tree = Pine::Tree.new
+  def _pine
+    if @_pine.nil?
+      @_pine = Pine.new
       template if respond_to? :template
       routes if respond_to? :routes
     end
-    @_tree
+    @_pine
   end
   
   def _call_handler handler, *args
@@ -39,8 +39,8 @@ module Sansomable
   end
   
   def call env
-    return _not_found if _tree.empty? # no routes
-    m = _tree.match env["PATH_INFO"], env["REQUEST_METHOD"]
+    return _not_found if _pine.empty? # no routes
+    m = _pine.match env["PATH_INFO"], env["REQUEST_METHOD"]
     return _not_found if m.nil?
     
     r = Rack::Request.new env
@@ -65,7 +65,7 @@ module Sansomable
   end
   
   def start port=3001, handler=""
-    raise RouteError, "No routes." if _tree.empty?
+    raise RouteError, "No routes." if _pine.empty?
     begin
       h = Rack::Handler.get handler.to_s
     rescue LoadError, NameError
@@ -99,6 +99,6 @@ module Sansomable
     return super unless path && item && item != self
     return super unless VALID_VERBS.include? meth
     return super unless item.respond_to? :call
-    _tree.map_path path, item, meth
+    _pine.map_path path, item, meth
   end
 end
