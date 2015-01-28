@@ -30,7 +30,7 @@ class Pine
   # path_comps("/my/path/")
   # => ["my", "path"]
   def path_comps path
-    path[1..(path[-1] == "/" ? -2 : -1)].split "/"
+    path.nil? || path.empty? ? [] : path[1..(path[-1] == "/" ? -2 : -1)].split('/')
   end
   
   # map_path "/food", Subsansom.new, :map
