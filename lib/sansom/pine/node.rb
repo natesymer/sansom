@@ -96,7 +96,7 @@ class Pine
       Hash[@children.to_a + @wildcard_children.to_a]
     end
     
-    def child? another
+    def child? anothrer
       another.ancestor? self
     end
     
