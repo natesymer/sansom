@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
 # Tree data structure designed specifically for
-# routing. It is capable of matching both wildcards
-# and semiwildcards.
+# routing. It uses libpatternmatch (google it) to
+# match paths with splats and mappings 
 # 
 # While other path routing software optimizes path parsing,
 # Pine optimizes lookup. You could say it matches a route in
@@ -12,8 +12,7 @@
 require_relative "./pine/node"
 
 class Pine
-  Match = Struct.new :handler, # Proc/Subsansom/Rack App
-                     :remaining_path, # Part of path that wasn't matched, applies to subsansoms
+  Match = Struct.new :remaining_path, # Part of path that wasn't matched, applies to subsansoms
                      :matched_path, # The matched part of a path
                      :params # Wildcard params
                      
@@ -39,9 +38,9 @@ class Pine
   def map_path path, handler, key
     @cache.clear
 
-    node = (path == "/") ? @root : path_comps(path).inject(@root) { |n, comp| n << comp } # Fucking ruby interpreter
+    node = (path == "/") ? @root : path_comps(path).inject(@root) { |n, comp| n << comp }
 
-    if key == :map && !handler.is_a?(Proc) # fucking ruby interpreter
+    if key == :map && !handler.is_a?(Proc)
       if handler.singleton_class.include? Sansomable
         node.subsansoms << handler
       else
@@ -62,7 +61,7 @@ class Pine
     return @cache[k] if @cache.has_key? k
     
     matched_length = 0
-    matched_params = {}
+    matched_params = { :splat => [] }
     matched_wildcard = false
 
     walk = path_comps(path).inject @root do |n, comp|
@@ -70,7 +69,8 @@ class Pine
       break n if c.nil?
       matched_length += comp.length+1
       if c.dynamic?
-        matched_params[c.wildcard] = comp[c.wildcard_range] 
+        matched_params.merge c.mapping(comp)
+        matched_params[:splat].merge c.splats(comp)
         matched_wildcard = true
       end
       c
