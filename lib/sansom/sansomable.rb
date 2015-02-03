@@ -8,24 +8,20 @@ module Sansomable
   RouteError = Class.new StandardError
   ResponseError = Class.new StandardError
   HTTP_VERBS = [:get,:head, :post, :put, :delete, :patch, :options, :link, :unlink, :trace].freeze
-  ACTION_VERBS = [:map].freeze
+  ACTION_VERBS = [:mount].freeze
   VALID_VERBS = (HTTP_VERBS+ACTION_VERBS).freeze
   RACK_HANDLERS = ["puma", "unicorn", "thin", "webrick"].freeze
-  NOTFOUND_TEXT = "Not found.".freeze
+  NOT_FOUND_RESP = [404, {}, ["Not found."]].freeze
 
   def _pine
     if @_pine.nil?
       @_pine = Pine.new
-      template if respond_to? :template
       routes if respond_to? :routes
     end
     @_pine
   end
   
   def _call_handler handler, *args
-    raise ArgumentError, "Handler must not be nil." if handler.nil?
-    raise ArgumentError, "Handler must be a valid rack app." unless handler.respond_to? :call
-    raise ArgumentError, "Handler cannot take all passed args." if handler.respond_to?(:arity) && args.count != handler.arity
     res = handler.call *args
     res = res.finish if res.is_a? Rack::Response
     raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res # custom method
@@ -33,31 +29,28 @@ module Sansomable
     res
   end
   
-  def _not_found
-    return _call_route @_not_found, r unless @_not_found.nil?
-    [404, {}, [NOTFOUND_TEXT]]
-  end
-  
   def call env
-    return _not_found if _pine.empty? # no routes
-    m = _pine.match env["PATH_INFO"], env["REQUEST_METHOD"]
-    return _not_found if m.nil?
+    raise RouteError, "No routes." if _pine.empty?
+    
+    handler, remaining_path, _, route_params = _pine.match env["PATH_INFO"], env["REQUEST_METHOD"]
+    return NOT_FOUND_RESP if m.nil?
     
     r = Rack::Request.new env
     
     begin
-      r.path_info = m.remaining_path unless Proc === m.handler
+      r.path_info = remaining_path unless Proc === handler
       
       unless m.params.empty?
         r.env["rack.request.query_string"] = r.query_string # now Rack::Request#GET will return r.env["rack.request.query_hash"]
-        (r.env["rack.request.query_hash"] ||= {}).merge! m.params # update the necessary field in the hash
+        (r.env["rack.request.query_hash"] ||= {}).merge! route_params # add route params r.env["rack.request.query_hash"]
         r.instance_variable_set "@params", nil # tell Rack::Request to recalc Rack::Request#params
       end
       
-      res = _call_handler @_before, r if @_before # call before block
-      res ||= _call_handler m.handler, (Proc === m.handler ? r : r.env) # call route handler block
-      res ||= _call_handler @_after, r, res if @_after # call after block
-      res ||= _not_found
+      res   = _call_handler    @_before, r                               if @_before       # call before block
+      res ||= _call_handler     handler, (Proc === handler ? r : r.env)                    # call route handler block
+      res ||= _call_handler     @_after, r, res                          if @_after && res # call after block
+      res ||= _call_handler @_not_found, r                               if @_not_found    # call error block
+      res ||= NOT_FOUND_RESP # fallback error message
       res
     rescue => e
       _call_handler @_error_blocks[e.class], e, r rescue raise e
@@ -75,24 +68,14 @@ module Sansomable
     end
   end
   
-  def error error_key=nil, &block
-    (@_error_blocks ||= Hash.new { |h| h[:default] })[error_key || :default] = block
+  def error error_class=:default, &block
+    raise ArgumentError, "Invalid error: #{error_class}" unless Class === error_class || error_class == :default
+    (@_error_blocks ||= Hash.new { |h| h[:default] })[error_class] = block
   end
   
-  def before &block
-    raise ArgumentError, "Before filter blocks must take one argument." if block && block.arity != 1
-    @_before = block
-  end
-  
-  def after &block
-    raise ArgumentError, "After filter blocks must take two arguments." if block && block.arity != 2
-    @_after = block
-  end
-  
-  def not_found &block
-    raise ArgumentError, "Not found blocks must take one argument." if block && block.arity != 1
-    @_not_found = block
-  end
+  def before &block; @_before = block; end # 1 arg
+  def after &block; @_after = block; end # 2 args
+  def not_found &block; @_not_found = block; end # 1 arg
   
   def method_missing meth, *args, &block
     path, item = *args.dup.push(block)

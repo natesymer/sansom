@@ -1,23 +1,20 @@
 #!/usr/bin/env ruby
 
-# represents a node on the routing tree
-
-# No regexes are used once a node is initialized
+# represents a node on the routing tree.
+# does not use any regexes. Rather, it uses
+# a custom pattern matching library
 
 require "pine/matcher"
 
 class Pine
   class Node
-    LineageError = Class.new StandardError
-    ROOT = "/".freeze
-    
     attr_reader   :name # node "payload" data
     attr_accessor :parent # node reference system
     attr_reader   :children # hash of non-patterned children
     attr_reader   :dynamic_children # array of patterned chilren
     attr_reader   :rack_app, :subsansoms, :blocks # mapping
 
-    def initialize name=ROOT
+    def initialize name='/'
       @name = name.freeze
       @matcher = Pine::Matcher.new name
       @children = {}
@@ -26,9 +23,7 @@ class Pine
       @subsansoms = []
     end
     
-    def inspect
-      "#<#{self.class}: #{children.count+dynamic_children} children, #{leaf? ? "leaf" : "internal node"}>"
-    end
+    def inspect; "#<#{self.class}: #{children.count+dynamic_children} children, #{leaf? ? "leaf" : "internal node"}>"; end
     
     def == another
       parent == another.parent &&
@@ -59,10 +54,10 @@ class Pine
       a[1..-1]
     end
     
-    def root?; name == ROOT; end
+    def root?; name == '/'; end
     def leaf?; children.empty? && dynamic_children.empty? && subsansoms.empty? && rack_app.nil?; end
     
-    def dynamic?; @matcher.dynamic?; end
+    def dynamic?; @matcher.dynamic? || name.start_with ':'; end
     def splats comp; @matcher.splats comp; end
     def mapping comp; @matcher.mapping comp; end
     
@@ -70,8 +65,9 @@ class Pine
     # Partially chainable: No guarantee the returned value responds to :child or :[]
     def child comp
       raise ArgumentError, "Invalid path component." if comp.nil? || comp.empty?
-      return @children[comp] if @children.member? comp
-      dynamic_children.detect { |c| c.instance_variable_get("@matcher").matches? comp }
+      res   = @children[comp]
+      res ||= dynamic_children.detect { |c| c.instance_variable_get("@matcher").matches? comp }
+      res
     end
     
     alias_method :[], :child
@@ -96,12 +92,17 @@ class Pine
       end
       
       unless p.nil?
-        # add to new parent's children structure
-        if name.start_with(':')
+        if name.start_with ':'
+          # remove conflicting children
           p.children.reject! { |_,c| c.leaf? }
           p.dynamic_children.reject!(&:leaf?)
         end
-        p.dynamic_children << self
+        
+        if dynamic?
+          p.dynamic_children << self # add to new parent's children structure
+        else
+          p.children[name] = self
+        end
       end
 
       @parent = p # set new parent

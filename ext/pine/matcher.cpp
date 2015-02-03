@@ -23,7 +23,7 @@ void Init_matcher() {
   rb_define_method(p_cMatcher, "matches?", RUBY_METHOD_FUNC(matcher_matches), 1);
   rb_define_method(p_cMatcher, "dynamic?", RUBY_METHOD_FUNC(matcher_is_dynamic), 0);
   rb_define_method(p_cMatcher, "splats", RUBY_METHOD_FUNC(matcher_splats), 1);
-  rb_define_method(p_cMatcher, "mapping", RUBY_METHOD_FUNC(matcher_mapping), 1);
+  rb_define_method(p_cMatcher, "mappings", RUBY_METHOD_FUNC(matcher_mappings), 1);
 }
 
 static lpm::pattern * getPattern(VALUE self) {
@@ -79,9 +79,9 @@ static VALUE matcher_splats(VALUE self, VALUE, rb_str) {
   return ary;
 }
 
-static VALUE matcher_mapping(VALUE self, VALUE, rb_str) {
+static VALUE matcher_mappings(VALUE self, VALUE, rb_str) {
   lpm::pattern *p = getPattern(self);
-  map<string, string> mapping = p->extract_mapping(StringValueCStr(rb_str))
+  map<string, string> mapping = p->extract_mappings(StringValueCStr(rb_str))
   VALUE hsh = rb_hash_new();
   for (map<string, string>::iterator i = wildcards.begin(); i != wildcards.end(); i++) {
     rb_hash_aset(hsh,rb_str_new2(i->first.c_str()),rb_str_new2(i->second.c_str()));
