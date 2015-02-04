@@ -163,7 +163,12 @@ Matching
 
   - Wildcard routes can't have any siblings
   - A matching order is enforced:
-  	1. The route matching the path and verb
+  	1. The route matching the path and verb. Routes have a sub-order:
+  		1. "Static" paths
+  		2. Wildcards (see below)
+  			1. Full mappings (kinda a non-compete)
+  			2. Partial mappings
+  			3. Splats
   	2. The first Subsansom that matches the route & verb
   	3. The first mounted non-`Sansom` rack app matching the route
   	
@@ -177,16 +182,11 @@ Sansom supports multiple wildcards:
 `/path/to/*.json` - Splat
 `/path/to/*.<format>.<compression>` - You can mix them.
 
-Wildcards have precedence:
-
-1. Normal (not containing wildcards) paths
-2. Full mappings (kinda a non-compete)
-3. Partial mappings
-4. Splats
-
 Mappings map part of the route (for example `format` above) to the corresponding part of the matched path (for `/resource.<format>` and `/resource.json` yields a mapping of `format`:`json`).
 
 Mappings (full and partial) are available in `Rack::Request#params` **by name**, and splats are available under the key `splats` in `Rack::Request#params`.
+
+*See the Matching section of this readme for wildcard precedence.*
 
 
 Notes
