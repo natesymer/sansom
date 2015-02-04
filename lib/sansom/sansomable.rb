@@ -40,9 +40,9 @@ module Sansomable
     begin
       r.path_info = remaining_path unless Proc === handler
       
-      unless m.params.empty?
+      unless route_params.empty?
         r.env["rack.request.query_string"] = r.query_string # now Rack::Request#GET will return r.env["rack.request.query_hash"]
-        (r.env["rack.request.query_hash"] ||= {}).merge! route_params # add route params r.env["rack.request.query_hash"]
+        r.env["rack.request.query_hash"] = Rack::Utils.parse_nested_query(r.query_string).merge(route_params) # add route params r.env["rack.request.query_hash"]
         r.instance_variable_set "@params", nil # tell Rack::Request to recalc Rack::Request#params
       end
       

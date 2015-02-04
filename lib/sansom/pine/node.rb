@@ -23,7 +23,7 @@ class Pine
       @subsansoms = []
     end
     
-    def inspect; "#<#{self.class}: #{children.count+dynamic_children} children, #{leaf? ? "leaf" : "internal node"}>"; end
+    def inspect; "#<#{self.class}: #{children.count+dynamic_children.count} children, #{leaf? ? "leaf" : "internal node"}>"; end
     
     def == another
       parent == another.parent &&

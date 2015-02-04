@@ -38,6 +38,11 @@ namespace lpm {
     char *pattern = (char *)_pattern.c_str();
     char *str = (char *)cppstr.c_str();
     int index_delta = 0;
+    
+    if (_pattern[0] == ':') {
+      m[_pattern.substr(1,_pattern.length()-1)] = cppstr;
+      return m;
+    }
 
     for (auto i = _index.begin(); i != _index.end(); i++) {
       unsigned idx = i->first;

@@ -66,7 +66,7 @@ class Pine
       break n if c.nil?
       matched_length += comp.length+1
       if c.dynamic?
-        matched_params.merge c.mappings(comp)
+        matched_params.merge! c.mappings(comp)
         matched_params[:splat].push *c.splats(comp)
         matched_wildcard = true
       end

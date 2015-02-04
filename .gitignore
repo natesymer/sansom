@@ -1,3 +1,4 @@
+ext/sansom/pine/Makefile
 *.gem
 *.rbc
 .bundle
