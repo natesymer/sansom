@@ -33,7 +33,7 @@ module Sansomable
     raise RouteError, "No routes." if _pine.empty?
     
     handler, remaining_path, _, route_params = _pine.match env["PATH_INFO"], env["REQUEST_METHOD"]
-    return NOT_FOUND_RESP if m.nil?
+    return NOT_FOUND_RESP if handler.nil?
     
     r = Rack::Request.new env
     

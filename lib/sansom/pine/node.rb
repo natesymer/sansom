@@ -4,7 +4,7 @@
 # does not use any regexes. Rather, it uses
 # a custom pattern matching library
 
-require "pine/matcher"
+require "sansom/pine/matcher"
 
 class Pine
   class Node
@@ -14,8 +14,8 @@ class Pine
     attr_reader   :dynamic_children # array of patterned chilren
     attr_reader   :rack_app, :subsansoms, :blocks # mapping
 
-    def initialize name='/'
-      @name = name.freeze
+    def initialize n='/'
+      @name = n.freeze
       @matcher = Pine::Matcher.new name
       @children = {}
       @dynamic_children = []
@@ -57,9 +57,9 @@ class Pine
     def root?; name == '/'; end
     def leaf?; children.empty? && dynamic_children.empty? && subsansoms.empty? && rack_app.nil?; end
     
-    def dynamic?; @matcher.dynamic? || name.start_with ':'; end
+    def dynamic?; @matcher.dynamic? || name.start_with?(':'); end
     def splats comp; @matcher.splats comp; end
-    def mapping comp; @matcher.mapping comp; end
+    def mappings comp; @matcher.mappings comp; end
     
     # WARNING: Sansom's biggest bottleneck
     # Partially chainable: No guarantee the returned value responds to :child or :[]
@@ -92,7 +92,7 @@ class Pine
       end
       
       unless p.nil?
-        if name.start_with ':'
+        if name.start_with? ':'
           # remove conflicting children
           p.children.reject! { |_,c| c.leaf? }
           p.dynamic_children.reject!(&:leaf?)

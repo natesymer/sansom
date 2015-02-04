@@ -14,6 +14,7 @@ Gem::Specification.new do |s|
 
   allfiles = `git ls-files -z`.split("\x0")
   s.files         = allfiles.grep(%r{(^[^\/]*$|^lib\/)}) # Match all lib files AND files in the root
+  s.extensions    = ["ext/sansom/pine/extconf.rb"]
   s.executables   = allfiles.grep(%r{^bin/}) { |f| File.basename(f) }
   s.test_files    = allfiles.grep(%r{^(test|spec|features)/})
   s.require_paths = ["lib"]
