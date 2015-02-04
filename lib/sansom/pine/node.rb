@@ -92,12 +92,6 @@ class Pine
       end
       
       unless p.nil?
-        if name.start_with? ':'
-          # remove conflicting children
-          p.children.reject! { |_,c| c.leaf? }
-          p.dynamic_children.reject!(&:leaf?)
-        end
-        
         if dynamic?
           p.dynamic_children << self # add to new parent's children structure
         else
