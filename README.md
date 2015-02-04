@@ -161,16 +161,15 @@ Matching
 
 `Sansom` uses trees to match routes. It follows a certain set of rules:
 
-  - Wildcard routes can't have any siblings
-  - A matching order is enforced:
-  	1. The route matching the path and verb. Routes have a sub-order:
-  		1. "Static" paths
-  		2. Wildcards (see below)
-  			1. Full mappings (kinda a non-compete)
-  			2. Partial mappings
-  			3. Splats
-  	2. The first Subsansom that matches the route & verb
-  	3. The first mounted non-`Sansom` rack app matching the route
+1. The route matching the path and verb. Routes have a sub-order:
+	1. "Static" paths
+	2. Wildcards (see below)
+		1. Full mappings (kinda a non-compete)
+		2. Partial mappings
+		3. Splats
+  	3. The first Subsansom that matches the route & verb
+  	4. The first mounted non-`Sansom` rack app matching the route
+  	
   	
 Wildcards
 -
