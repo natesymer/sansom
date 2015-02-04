@@ -24,7 +24,7 @@ module Sansomable
   def _call_handler handler, *args
     res = handler.call *args
     res = res.finish if res.is_a? Rack::Response
-    raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res # custom method
+    raise ResponseError, "Response must either be a rack response, string, or object" unless Rack::Lint.fastlint res
     res = [200, {}, [res.to_str]] if res.respond_to? :to_str
     res
   end
