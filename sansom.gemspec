@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |s|
   s.name          = "sansom"
-  s.version       = "0.3.1"
+  s.version       = "0.3.2"
   s.authors       = ["Nathaniel Symer"]
   s.email         = ["nate@natesymer.com"]
   s.summary       = "Scientific, philosophical, abstract web 'picowork' named after Sansom street in Philly, near where it was made."
@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.license       = "MIT"
 
   allfiles = `git ls-files -z`.split("\x0")
-  s.files         = allfiles.grep(%r{(^[^\/]*$|^lib\/)}) # Match all lib files AND files in the root
+  s.files         = Dir.glob("{bin,lib,ext}/**/*")
   s.extensions    = ["ext/sansom/pine/extconf.rb"]
   s.executables   = allfiles.grep(%r{^bin/}) { |f| File.basename(f) }
   s.test_files    = allfiles.grep(%r{^(test|spec|features)/})
