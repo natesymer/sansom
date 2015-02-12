@@ -142,7 +142,7 @@ Error blocks allow for the app to return something parseable when an error is ra
     require "json"
     
     s = Sansom.new
-    s.error do |r, err| # err is the error, r is a Rack::Request
+    s.error do |err,r| # err is the error, r is a Rack::Request
       [500, {"yo" => "headers"}, [{ :message => err.message }.to_json]]
     end
     
